@@ -17,7 +17,7 @@ export async function POST(req) {
         }
 
         const existingWord = await Word.findOne({ email: session.user.email });
-        if (existingWord.data) {
+        if (existingWord) {
             existingWord.data.push(body);
             await existingWord.save();
             return NextResponse.json({ success: true, data: existingWord });
