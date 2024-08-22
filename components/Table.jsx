@@ -62,7 +62,7 @@ function Table({ data }) {
                             <td>{d.type || "Any"}</td>
                             <td>
                                 <button
-                                    className="bg-transparent border-2 border-blue-500 hover:bg-blue-800 hover:text-white py-1 px-4 my-2 rounded transition-all duration-500"
+                                    className="bg-transparent border-2 border-sky-600 hover:bg-sky-800 hover:border-sky-800 hover:text-white py-1 px-4 my-2 rounded transition-all duration-500"
                                     onClick={() => handleSpeak(d.german)}
                                 >
                                     Speak
