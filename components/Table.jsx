@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 const HEADERS = ["German word", "English word", "Type", "Speak"];
 
@@ -15,83 +15,84 @@ function Table({ data }) {
         if ("speechSynthesis" in window) {
             const utterance = new SpeechSynthesisUtterance(speakword);
             utterance.lang = "de-DE";
-            // utterance.rate = 1;
             speechSynthesis.speak(utterance);
         } else {
             alert("SpeechSynthesis is not supported in this browser");
         }
     }
 
-    return (
-        <div>
-            <table className="w-full table-fixed mt-10">
-                <thead>
-                    {HEADERS.map((h, i) => (
-                        <th key={i} className="bg-gray-200 capitalize py-2">
-                            {h}
-                        </th>
-                    ))}
-                </thead>
-                <tbody>
-                    {records.map((d, i) => {
-                        return (
-                            <tr
-                                className={`${
-                                    i % 2 !== 0 && "bg-gray-200"
-                                } text-center capitalize`}
-                                key={d.german}
-                            >
-                                <td className="">{d.german}</td>
-                                <td>{d.english}</td>
-                                <td>{d.type ? d.type : 'Any'}</td>
-                                <td>
-                                    <button
-                                        className="bg-transparent border-2 border-blue-500 hover:bg-blue-800 hover:text-white py-1 px-4 my-2 rounded transition-all duration-500"
-                                        onClick={() => handleSpeak(d.german)}
-                                    >
-                                        Speak
-                                    </button>
-                                </td>
-                            </tr>
-                        );
-                    })}
-                </tbody>
-            </table>
-            <div className="w-full flex flex-row items-center p-5">
-                <div className="flex flex-row items-center gap-4">
-                    <span
-                        className="cursor-pointer font-semibold"
-                        onClick={() => prevPage()}
-                    >
-                        prev
-                    </span>
-                    <div className="flex flex-row items-center">
-                        <span>{currentPage}</span>
-                        <span>/</span>
-                        <span>{numberOfPages}</span>
-                    </div>
-                    <span
-                        className="cursor-pointer font-semibold"
-                        onClick={() => nextPage()}
-                    >
-                        next
-                    </span>
-                </div>
-            </div>
-        </div>
-    );
-
     function nextPage() {
-        if (currentPage != numberOfPages) {
+        if (currentPage < numberOfPages) {
             setCurrentPage((prev) => prev + 1);
         }
     }
 
     function prevPage() {
-        if (currentPage != 1) {
+        if (currentPage > 1) {
             setCurrentPage((prev) => prev - 1);
         }
     }
+
+    return (
+        <div>
+            <table className="w-11/12 m-auto table-fixed mt-10 shadow-xl">
+                <thead>
+                    <tr className="bg-sky-800 text-white">
+                        {HEADERS.map((header, index) => (
+                            <th
+                                key={index}
+                                scope="col"
+                                className="capitalize py-2"
+                            >
+                                {header}
+                            </th>
+                        ))}
+                    </tr>
+                </thead>
+                <tbody>
+                    {records.map((d, i) => (
+                        <tr
+                            className={`${
+                                i % 2 !== 0 ? "bg-gray-200" : ""
+                            } text-center capitalize`}
+                            key={d.german}
+                        >
+                            <td>{d.german}</td>
+                            <td>{d.english}</td>
+                            <td>{d.type || "Any"}</td>
+                            <td>
+                                <button
+                                    className="bg-transparent border-2 border-blue-500 hover:bg-blue-800 hover:text-white py-1 px-4 my-2 rounded transition-all duration-500"
+                                    onClick={() => handleSpeak(d.german)}
+                                >
+                                    Speak
+                                </button>
+                            </td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+            <div className="w-full flex justify-center space-x-4 my-4 items-center">
+                <button
+                    className="p-3 rounded-full bg-sky-800 text-white"
+                    onClick={prevPage}
+                    disabled={currentPage === 1}
+                >
+                    Prev
+                </button>
+                <span>
+                    {currentPage} / {numberOfPages}
+                </span>
+                <button
+                    className="p-3 rounded-full bg-sky-800 text-white"
+                    onClick={nextPage}
+                    disabled={currentPage === numberOfPages}
+                >
+                    Next
+                </button>
+            </div>
+        </div>
+    );
 }
 
 export default Table;

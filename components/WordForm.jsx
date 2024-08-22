@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useState } from "react";
+import toast from "react-hot-toast";
 
-const Accordion = ({onWordAdd}) => {
+const Accordion = ({ onWordAdd }) => {
     const [isOpen, setIsOpen] = useState(false);
 
     const toggleAccordion = () => {
@@ -23,26 +24,29 @@ const Accordion = ({onWordAdd}) => {
     );
 };
 
-const WordForm = ({onWordAdd}) => {
+const WordForm = ({ onWordAdd }) => {
     const handleSubmit = async (e) => {
         e.preventDefault();
-        const formData = new FormData(e.target);
+        const form = e.target;
+        const formData = new FormData(form);
         const data = {
             german: formData.get("germanWord"),
             english: formData.get("englishWord"),
             type: formData.get("type"),
         };
         try {
-            const response = await fetch('/api/words',{
-                method: 'POST',
+            const response = await fetch("/api/words", {
+                method: "POST",
                 body: JSON.stringify(data),
                 headers: {
-                  'content-type': 'application/json'
-                }
+                    "content-type": "application/json",
+                },
             });
             const res = await response.json();
-            if(res.success) {
+            if (res.success) {
                 onWordAdd(res.data.data);
+                toast.success("Word added successfully!");
+                form.reset();
             }
         } catch (error) {
             console.error("Error:", error);
@@ -92,11 +96,13 @@ const WordForm = ({onWordAdd}) => {
                     <select
                         id="type"
                         name="type"
-                        className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm rounded-md"
+                        className="mt-1 block w-full pl-3 pr-10 py-2 text-base outline-1 outline-gray-300 focus:bg-sky-50 focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm rounded-md"
                     >
                         <option>Noun</option>
                         <option>Verb</option>
                         <option>Adjective</option>
+                        <option>Adverb</option>
+                        <option>Pronoun</option>
                     </select>
                 </div>
                 <button
