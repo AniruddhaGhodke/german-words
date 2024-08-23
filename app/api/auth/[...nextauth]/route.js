@@ -57,17 +57,16 @@ const authOptions = {
             if (account?.provider == "credentials") {
                 return true;
             }
-
             if (account?.provider == "google") {
                 try {
-                    await connectDB;
+                    await connectDB();
 
                     const userExist = await User.findOne({
                         email: profile.email,
                     });
 
                     if (!userExist) {
-                        const user = await User.create({
+                        await User.create({
                             email: profile.email,
                             name: profile.name,
                             image: profile.picture,
@@ -79,6 +78,15 @@ const authOptions = {
                     return false;
                 }
             }
+        },
+    },
+    pages: {
+        signIn: "/login",
+    },
+    events: {
+        error: async (message) => {
+            console.error("NextAuth error:", message);
+            return `/login`;
         },
     },
     secret: process.env.NEXTAUTH_SECRET,
