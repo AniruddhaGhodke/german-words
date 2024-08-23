@@ -4,14 +4,18 @@ import { addWord } from "@/server_actions/words";
 import React, { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import Table from "./Table";
+import TableSkeleton from "./TableSkeleton";
 
-const Accordion = ({session}) => {
+const Accordion = () => {
     const [isOpen, setIsOpen] = useState(false);
     const [data, setData] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
 
     async function fetchData() {
+        setIsLoading(true);
         const response = await fetch("/api/words");
         const res = await response.json();
+        setIsLoading(false);
         if (res.success && res.data) handleSetData(res.data.data);
     }
 
@@ -40,11 +44,13 @@ const Accordion = ({session}) => {
                 {isOpen && <WordForm onWordAdd={handleSetData} />}
             </div>
 
-            {data.length && session ? (
+            {isLoading ? (
+                <TableSkeleton />
+            ) : data.length ? (
                 <Table data={data} />
             ) : (
                 <p className="mt-20 w-full flex justify-center text-red-600 text-2xl">
-                    No records or you need to login first
+                    No records
                 </p>
             )}
         </>

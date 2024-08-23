@@ -1,4 +1,5 @@
 import { getServerSession } from "next-auth";
+import { redirect } from 'next/navigation';
 
 import Header from "@/components/Header";
 import React from "react";
@@ -9,6 +10,7 @@ const Home = async () => {
     const session = await getServerSession(authOptions);
     const user = session?.user || null;
     const isLoggedIn = !!user;
+    if (!isLoggedIn) redirect('/login');
     return (
         <>
             <Header session={isLoggedIn} />

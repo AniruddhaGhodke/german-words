@@ -44,8 +44,8 @@ const LoginForm = () => {
         }
         if (res?.url) router.replace("/");
     };
-  return (
-    <div className="flex min-h-full flex-1 flex-col justify-center py-12 sm:px-6 lg:px-8">
+    return (
+        <div className="flex min-h-full flex-1 flex-col justify-center py-12 sm:px-6 lg:px-8">
             <div className="flex justify-center flex-col items-center">
                 <h2 className="mt-6 text-center text-2xl leading-9 tracking-tight text-gray-900">
                     Sign in to your account
@@ -154,16 +154,25 @@ const LoginForm = () => {
                             </div>
                         </div>
 
-                        {/* <div className="mt-6">
+                        <div className="mt-6">
                             <button
-                                onClick={handleGoogleSubmit}
-                                className="flex w-full items-center border border-gray-300 justify-center gap-3 rounded-md bg-white px-3 py-1.5 text-black focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                                onClick={() =>
+                                    signIn("google", {
+                                        callbackUrl: "/",
+                                    })
+                                }
+                                className="flex w-full items-center justify-center gap-3 rounded-full border border-gray-300 bg-white px-4 py-2 text-black shadow-sm hover:bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500"
                             >
-                                <span className="text-sm font-semibold leading-6">
-                                    Google
+                                <img
+                                    src="/google-logo.svg"
+                                    alt="Google Logo"
+                                    className="h-5 w-5"
+                                />
+                                <span className="text-sm font-medium">
+                                    Sign in with Google
                                 </span>
                             </button>
-                        </div> */}
+                        </div>
                         <p className="text-red-600 text-center text-[16px] my-4">
                             {error && error}
                         </p>
@@ -171,7 +180,7 @@ const LoginForm = () => {
                 </div>
             </div>
         </div>
-  )
-}
+    );
+};
 
-export default LoginForm
+export default LoginForm;
