@@ -2,11 +2,12 @@ import { connectDB } from "@/utils/db";
 import Word from "@/models/word";
 import { NextResponse } from "next/server";
 import { getServerSession  } from "next-auth/next";
+import { authOptions } from "../auth/[...nextauth]/route";
 
 export async function POST(req) {
     try {
         await connectDB();
-        const session = await getServerSession();
+        const session = await getServerSession(authOptions);
         if (!session) {
             return NextResponse.json({ success: false, error: "Unauthorized access" });
         }

@@ -1,61 +1,73 @@
 "use client";
 
-import React, { useState } from "react";
+import { addWord } from "@/server_actions/words";
+import React, { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
+import Table from "./Table";
 
-const Accordion = ({ onWordAdd }) => {
+const Accordion = ({session}) => {
     const [isOpen, setIsOpen] = useState(false);
+    const [data, setData] = useState([]);
+
+    async function fetchData() {
+        const response = await fetch("/api/words");
+        const res = await response.json();
+        if (res.success && res.data) handleSetData(res.data.data);
+    }
+
+    function handleSetData(newData) {
+        setData(newData);
+    }
+
+    useEffect(() => {
+        fetchData();
+    }, []);
 
     const toggleAccordion = () => {
         setIsOpen(!isOpen);
     };
 
     return (
-        <div className="mt-20 max-w-screen-xl mx-auto flex items-center justify-center flex-col">
-            <a
-                href="#"
-                onClick={toggleAccordion}
-                className="text-blue-500 hover:text-blue-600 cursor-pointer"
-            >
-                {isOpen ? "Hide Form" : "Show Form"}
-            </a>
-            {isOpen && <WordForm onWordAdd={onWordAdd} />}
-        </div>
+        <>
+            <div className="mt-20 max-w-screen-xl mx-auto flex items-center justify-center flex-col">
+                <a
+                    href="#"
+                    onClick={toggleAccordion}
+                    className="text-blue-500 hover:text-blue-600 cursor-pointer"
+                >
+                    {isOpen ? "Hide Form" : "Show Form"}
+                </a>
+                {isOpen && <WordForm onWordAdd={handleSetData} />}
+            </div>
+
+            {data.length && session ? (
+                <Table data={data} />
+            ) : (
+                <p className="mt-20 w-full flex justify-center text-red-600 text-2xl">
+                    No records or you need to login first
+                </p>
+            )}
+        </>
     );
 };
 
 const WordForm = ({ onWordAdd }) => {
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        const form = e.target;
-        const formData = new FormData(form);
-        const data = {
-            german: formData.get("germanWord"),
-            english: formData.get("englishWord"),
-            type: formData.get("type"),
-        };
-        try {
-            const response = await fetch("/api/words", {
-                method: "POST",
-                body: JSON.stringify(data),
-                headers: {
-                    "content-type": "application/json",
-                },
-            });
-            const res = await response.json();
-            if (res.success) {
-                onWordAdd(res.data.data);
-                toast.success("Word added successfully!");
-                form.reset();
-            }
-        } catch (error) {
-            console.error("Error:", error);
+    const formRef = useRef();
+
+    async function handleSubmit(formData) {
+        const result = await addWord(formData);
+        if (result.success) {
+            onWordAdd(result.data);
+            toast.success("Word added successfully!");
+            formRef.current.reset();
+        } else {
+            toast.error(result.error || "Failed to add word");
         }
-    };
+    }
 
     return (
         <div className="shadow-lg p-5 w-full bg-white rounded-lg mt-2">
-            <form className="space-y-4" onSubmit={handleSubmit}>
+            <form ref={formRef} className="space-y-4" action={handleSubmit}>
                 <div>
                     <label
                         htmlFor="germanWord"
