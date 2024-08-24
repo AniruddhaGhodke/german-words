@@ -12,10 +12,10 @@ const Home = async () => {
     const isLoggedIn = !!user;
     if (!isLoggedIn) redirect('/login');
     return (
-        <>
+        <div className="min-h-screen">
             <Header session={isLoggedIn} />
             {session ? <Accordion session={isLoggedIn} /> : null}
-        </>
+        </div>
     );
 };
 
