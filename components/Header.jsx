@@ -14,9 +14,9 @@ export default function Header({ session }) {
         <header className="bg-gradient-to-r from-black via-red-600 to-yellow-400 text-white w-full sticky top-0 left-0 z-10">
             <div className="absolute inset-0 bg-black opacity-40"></div>
             <div className="relative max-w-screen-xl mx-auto flex justify-between items-center p-4">
-                <Link href="/">
-                    <span className="text-white font-bold">Home</span>
-                </Link>
+                <div>
+                    Hello! <span className="text-white font-bold">{session}</span>
+                </div>
                 {session ? (
                     <button
                         onClick={handleSignOut}

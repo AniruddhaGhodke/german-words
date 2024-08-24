@@ -1,5 +1,5 @@
 import { getServerSession } from "next-auth";
-import { redirect } from 'next/navigation';
+import { redirect } from "next/navigation";
 
 import Header from "@/components/Header";
 import React from "react";
@@ -10,10 +10,11 @@ const Home = async () => {
     const session = await getServerSession(authOptions);
     const user = session?.user || null;
     const isLoggedIn = !!user;
-    if (!isLoggedIn) redirect('/login');
+    if (!isLoggedIn) redirect("/login");
+    const { name } = user;
     return (
         <div className="min-h-screen">
-            <Header session={isLoggedIn} />
+            <Header session={name} />
             {session ? <Accordion session={isLoggedIn} /> : null}
         </div>
     );

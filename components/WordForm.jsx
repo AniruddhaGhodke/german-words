@@ -21,14 +21,16 @@ const Accordion = () => {
 
     function handleSetData(newData) {
         setData(newData);
+        setFilterData(newData);
     }
 
     function handleFilter(filterType) {
-        if (filterType === "All") {
+        const caseInSensitiveType = filterType.toLowerCase();
+        if (caseInSensitiveType === "all") {
             setFilterData(data);
             return;
         }
-        const filteredData = data.filter((i) => i.type === filterType);
+        const filteredData = data.filter((i) => i.type?.toLowerCase() === caseInSensitiveType);
         setFilterData(filteredData);
     }
 
@@ -37,10 +39,11 @@ const Accordion = () => {
             setFilterData(data);
             return;
         }
+        const caseInSensitiveSearch = searchTearm.toLowerCase();
         const searchedWords = data.filter(
             (i) =>
-                i.german.includes(searchTearm) ||
-                i.english.includes(searchTearm)
+                i.german.toLowerCase().includes(caseInSensitiveSearch) ||
+                i.english.toLowerCase().includes(caseInSensitiveSearch)
         );
         setFilterData(searchedWords);
     }
@@ -59,11 +62,11 @@ const Accordion = () => {
 
             {isLoading ? (
                 <TableSkeleton />
-            ) : data.length ? (
+            ) : filterData.length ? (
                 <Table data={filterData.length ? filterData : data} />
             ) : (
                 <p className="mt-20 w-full flex justify-center text-red-600 text-2xl">
-                    No records
+                    No Words Found!!
                 </p>
             )}
         </>
