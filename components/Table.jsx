@@ -1,10 +1,11 @@
-"use client";
-import React, { useEffect, useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
+import toast from "react-hot-toast";
 
-const HEADERS = ["German word", "English word", "Type", "Speak"];
+const HEADERS = ["German word", "English word", "Type", "Actions"];
 
-function Table({ data }) {
+function Table({ data, updateData, handlePageChange }) {
     const [currentPage, setCurrentPage] = useState(1);
+    const [loading, setLoading] = useState(false);
     const nbPerPage = 10;
     const lastIndex = currentPage * nbPerPage;
     const startIndex = lastIndex - nbPerPage;
@@ -33,10 +34,59 @@ function Table({ data }) {
         }
     }
 
+    async function handleDelete(uuid) {
+        setLoading(true);
+        try {
+            const response = await fetch("/api/words", {
+                method: "DELETE",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ uuid }),
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success) {
+                    updateData(data.data);
+                    toast.success("Deleted Successfully!")
+                } else {
+                    console.error("Failed to delete word:", data.error);
+                }
+            } else {
+                console.error("Server error:", response.status);
+            }
+        } catch (error) {
+            console.error("Request failed:", error);
+        } finally {
+            setLoading(false);
+            handleCloseModal();
+        }
+    }
+    const modalRefs = useRef({});
+
+    const handleOpenModal = (uuid) => {
+        const modal = modalRefs.current[uuid];
+        if (modal) {
+            modal.classList.remove("hidden");
+        }
+    };
+    
+    const handleCloseModal = (uuid) => {
+        const modal = modalRefs.current[uuid];
+        if (modal) {
+            modal.classList.add("hidden");
+        }
+    };
+
+    const handleConfirmDelete = (uuid) => {
+        handleDelete(uuid);
+    };
+
     // Reset to first page when data changes
     useEffect(() => {
         setCurrentPage(1);
-    }, [data]);
+    }, [handlePageChange]);
 
     return (
         <div>
@@ -48,7 +98,11 @@ function Table({ data }) {
                                 <th
                                     key={index}
                                     scope="col"
-                                    className="capitalize py-2"
+                                    className={`${
+                                        index === 2
+                                            ? "hidden sm:table-cell"
+                                            : ""
+                                    } capitalize py-2`}
                                 >
                                     {header}
                                 </th>
@@ -61,18 +115,93 @@ function Table({ data }) {
                                 className={`${
                                     i % 2 !== 0 ? "bg-gray-200" : ""
                                 } text-center capitalize`}
-                                key={d.german}
+                                key={d.uuid}
                             >
                                 <td>{d.german}</td>
                                 <td>{d.english}</td>
-                                <td>{d.type || "Any"}</td>
+                                <td className="hidden sm:table-cell">
+                                    {d.type || "Any"}
+                                </td>
                                 <td>
                                     <button
-                                        className="bg-transparent border-2 border-sky-600 hover:bg-sky-800 hover:border-sky-800 hover:text-white py-1 px-4 my-2 rounded transition-all duration-500"
+                                        className="bg-transparent hover:text-white py-1 px-2 my-2 rounded"
                                         onClick={() => handleSpeak(d.german)}
+                                        aria-label="Speak"
                                     >
-                                        Speak
+                                        <img
+                                            src="/speaker.svg"
+                                            alt="Speak Icon"
+                                            className="h-5 w-5"
+                                        />
                                     </button>
+
+                                    <button
+                                        className="bg-transparent py-1 px-2 my-2 ml-2 rounded"
+                                        aria-label="Delete"
+                                        onClick={() => handleOpenModal(d.uuid)}
+                                    >
+                                        <img
+                                            src="/delete.svg"
+                                            alt="Delete Icon"
+                                            className="h-5 w-5"
+                                        />
+                                    </button>
+
+                                    <div
+                                        ref={(el) => (modalRefs.current[d.uuid] = el)}
+                                        className={`fixed inset-0 flex items-center justify-center z-50 hidden`}
+                                    >
+                                        <div className="bg-white p-4 rounded shadow-lg z-10">
+                                            <p>
+                                                Are you sure you want to delete{" "}
+                                                <span className="font-bold">
+                                                    {d.german}
+                                                </span>
+                                                ?
+                                            </p>
+                                            <div className="flex justify-end mt-4">
+                                                <button
+                                                    className="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded mr-2"
+                                                    onClick={() => handleCloseModal(d.uuid)}
+                                                >
+                                                    Cancel
+                                                </button>
+                                                <button
+                                                    className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded flex gap-2"
+                                                    onClick={() => handleConfirmDelete(d.uuid)}
+                                                    disabled={loading}
+                                                >
+                                                    {loading && (
+                                                        <svg
+                                                            className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                                                            xmlns="http://www.w3.org/2000/svg"
+                                                            fill="none"
+                                                            viewBox="0 0 24 24"
+                                                        >
+                                                            <circle
+                                                                className="opacity-25"
+                                                                cx="12"
+                                                                cy="12"
+                                                                r="10"
+                                                                stroke="currentColor"
+                                                                strokeWidth="4"
+                                                            ></circle>
+                                                            <path
+                                                                className="opacity-75"
+                                                                fill="currentColor"
+                                                                d="M4 12a8 8 0 018-8V4a10 10 0 00-10 10h2z"
+                                                            ></path>
+                                                        </svg>
+                                                    )}
+                                                    Confirm
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div
+                                            className="fixed inset-0 bg-black opacity-50"
+                                            onClick={() => handleCloseModal(d.uuid)}
+                                        ></div>
+                                    </div>
                                 </td>
                             </tr>
                         ))}

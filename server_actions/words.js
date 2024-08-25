@@ -3,6 +3,7 @@
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { getServerSession } from "next-auth/next";
 import Word from "@/models/word";
+import { v4 as uuidv4 } from 'uuid';
 
 import { connectDB } from "@/utils/db";
 
@@ -13,6 +14,7 @@ export async function addWord(formData) {
         german: formData.get("germanWord"),
         english: formData.get("englishWord"),
         type: formData.get("type"),
+        uuid: uuidv4()
     };
     try {
         await connectDB();
@@ -26,7 +28,7 @@ export async function addWord(formData) {
         if (existingWord) {
             existingWord.data.push(body);
             await existingWord.save();
-            return { success: true, data: existingWord.data };
+            return { success: true, data: JSON.stringify(existingWord.data) };
         } else {
             const word = new Word({
                 email: session.user.email,

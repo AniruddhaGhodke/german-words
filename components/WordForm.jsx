@@ -10,6 +10,7 @@ const Accordion = () => {
     const [data, setData] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [filterData, setFilterData] = useState([]);
+    const [isFiltered, setIsFiltered] = useState(false);
 
     async function fetchData() {
         setIsLoading(true);
@@ -25,16 +26,20 @@ const Accordion = () => {
     }
 
     function handleFilter(filterType) {
+        setIsFiltered(true);
         const caseInSensitiveType = filterType.toLowerCase();
         if (caseInSensitiveType === "all") {
             setFilterData(data);
             return;
         }
-        const filteredData = data.filter((i) => i.type?.toLowerCase() === caseInSensitiveType);
+        const filteredData = data.filter(
+            (i) => i?.type?.toLowerCase() === caseInSensitiveType
+        );
         setFilterData(filteredData);
     }
 
     function handleSearch(searchTearm) {
+        setIsFiltered(true);
         if (searchTearm === "") {
             setFilterData(data);
             return;
@@ -63,7 +68,11 @@ const Accordion = () => {
             {isLoading ? (
                 <TableSkeleton />
             ) : filterData.length ? (
-                <Table data={filterData.length ? filterData : data} />
+                <Table
+                    data={filterData.length ? filterData : data}
+                    updateData={handleSetData}
+                    handlePageChange={isFiltered}
+                />
             ) : (
                 <p className="mt-20 w-full flex justify-center text-red-600 text-2xl">
                     No Words Found!!
@@ -76,16 +85,19 @@ const Accordion = () => {
 const WordForm = ({ onWordAdd, onFilterChange, onSearch }) => {
     const formRef = useRef();
     const [isModalOpen, setModalOpen] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
 
     async function handleSubmit(formData) {
+        setIsLoading(true);
         const result = await addWord(formData);
         if (result.success) {
-            onWordAdd(result.data);
+            onWordAdd(JSON.parse(result.data));
             toast.success("Word added successfully!");
             formRef.current.reset();
         } else {
             toast.error(result.error || "Failed to add word");
         }
+        setIsLoading(false);
     }
 
     const openModal = () => setModalOpen(true);
@@ -111,6 +123,7 @@ const WordForm = ({ onWordAdd, onFilterChange, onSearch }) => {
                             className="space-y-4"
                             closeModal={closeModal}
                             isModal={isModalOpen}
+                            isLoading={isLoading}
                         />
                     </div>
                 </div>
@@ -122,12 +135,13 @@ const WordForm = ({ onWordAdd, onFilterChange, onSearch }) => {
                 className="hidden sm:flex gap-10 items-end flex-1"
                 action={handleSubmit}
                 isModal={isModalOpen}
+                isLoading={isLoading}
             />
 
             {/* Filter Forms */}
             <div className="flex flex-1 flex-col justify-start gap-2 sm:justify-end sm:gap-12 sm:flex-row">
                 <form className="flex justify-start items-end gap-2 sm:justify-end">
-                    <div>
+                    <div className="w-full flex flex-col">
                         <label
                             htmlFor="searchWord"
                             className="block text-sm font-medium text-gray-700"
@@ -146,7 +160,7 @@ const WordForm = ({ onWordAdd, onFilterChange, onSearch }) => {
                 </form>
 
                 <form className="flex justify-start items-end gap-2 sm:justify-end">
-                    <div>
+                    <div className="w-full flex flex-col">
                         <label
                             htmlFor="filterWords"
                             className="block text-sm font-medium text-gray-700"
@@ -173,75 +187,102 @@ const WordForm = ({ onWordAdd, onFilterChange, onSearch }) => {
     );
 };
 
-const FormTemplate = React.forwardRef(({ action, isModal, closeModal, ...props }, ref) => {
-    return (
-        <form ref={ref} action={action} {...props}>
-            <div>
-                <label
-                    htmlFor="germanWord"
-                    className="block text-sm font-medium text-gray-700"
-                >
-                    German Word:
-                </label>
-                <input
-                    type="text"
-                    id="germanWord"
-                    name="germanWord"
-                    className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm"
-                    placeholder="Enter German word"
-                />
-            </div>
-            <div>
-                <label
-                    htmlFor="englishWord"
-                    className="block text-sm font-medium text-gray-700"
-                >
-                    English Word:
-                </label>
-                <input
-                    type="text"
-                    id="englishWord"
-                    name="englishWord"
-                    className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm"
-                    placeholder="Enter English word"
-                />
-            </div>
-            <div>
-                <label
-                    htmlFor="type"
-                    className="block text-sm font-medium text-gray-700"
-                >
-                    Type:
-                </label>
-                <select
-                    id="type"
-                    name="type"
-                    className="mt-1 block w-full pl-3 pr-10 py-2 text-base outline-1 border border-gray-300 outline-gray-300 focus:bg-sky-50 rounded-md"
-                >
-                    <option>Noun</option>
-                    <option>Verb</option>
-                    <option>Adjective</option>
-                    <option>Adverb</option>
-                    <option>Pronoun</option>
-                </select>
-            </div>
-            <button
-                type="submit"
-                className={`${isModal ? 'w-full' : 'w-auto'} flex justify-center py-2 px-4 border border-sky-800 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-sky-800 hover:text-white transition-colors`}
-            >
-                Add
-            </button>
-            {isModal ? (
+const FormTemplate = React.forwardRef(
+    ({ action, isModal, closeModal, isLoading, ...props }, ref) => {
+        return (
+            <form ref={ref} action={action} {...props}>
+                <div>
+                    <label
+                        htmlFor="germanWord"
+                        className="block text-sm font-medium text-gray-700"
+                    >
+                        German Word:
+                    </label>
+                    <input
+                        type="text"
+                        id="germanWord"
+                        name="germanWord"
+                        className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm"
+                        placeholder="Enter German word"
+                    />
+                </div>
+                <div>
+                    <label
+                        htmlFor="englishWord"
+                        className="block text-sm font-medium text-gray-700"
+                    >
+                        English Word:
+                    </label>
+                    <input
+                        type="text"
+                        id="englishWord"
+                        name="englishWord"
+                        className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm"
+                        placeholder="Enter English word"
+                    />
+                </div>
+                <div>
+                    <label
+                        htmlFor="type"
+                        className="block text-sm font-medium text-gray-700"
+                    >
+                        Type:
+                    </label>
+                    <select
+                        id="type"
+                        name="type"
+                        className="mt-1 block w-full pl-3 pr-10 py-2 text-base outline-1 border border-gray-300 outline-gray-300 focus:bg-sky-50 rounded-md"
+                    >
+                        <option>Noun</option>
+                        <option>Verb</option>
+                        <option>Adjective</option>
+                        <option>Adverb</option>
+                        <option>Pronoun</option>
+                    </select>
+                </div>
                 <button
-                    type="button"
-                    onClick={closeModal}
-                    className="mt-4 w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-200 transition-colors"
+                    type="submit"
+                    disabled={isLoading}
+                    className={`${
+                        isModal ? "w-full" : "w-auto"
+                    } flex justify-center py-2 px-4 border border-sky-800 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-sky-800 hover:text-white transition-colors`}
                 >
-                    Cancel
+                    {isLoading && (
+                        <svg
+                            className="animate-spin -ml-1 mr-3 h-5 w-5 text-black"
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                        >
+                            <circle
+                                className="opacity-25"
+                                cx="12"
+                                cy="12"
+                                r="10"
+                                stroke="currentColor"
+                                strokeWidth="4"
+                            ></circle>
+                            <path
+                                className="opacity-75"
+                                fill="currentColor"
+                                d="M4 12a8 8 0 018-8V4a10 10 0 00-10 10h2z"
+                            ></path>
+                        </svg>
+                    )}
+                    Add
                 </button>
-            ) : null}
-        </form>
-    );
-});
+                {isModal ? (
+                    <button
+                        type="button"
+                        onClick={closeModal}
+                        className="mt-4 w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-200 transition-colors"
+                    >
+                        Cancel
+                    </button>
+                ) : null}
+            </form>
+        );
+    }
+);
 
 export default Accordion;
