@@ -26,7 +26,7 @@ export async function addWord(formData) {
         }
         const existingWord = await Word.findOne({ email: session.user.email });
         if (existingWord) {
-            existingWord.data.push(body);
+            existingWord.data.unshift(body);
             await existingWord.save();
             return { success: true, data: JSON.stringify(existingWord.data) };
         } else {
