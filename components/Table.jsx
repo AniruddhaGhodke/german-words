@@ -220,6 +220,13 @@ function Table({ data, updateData, handlePageChange }) {
             </div>
             <div className="w-full flex justify-center space-x-4 my-4 items-center">
                 <button
+                    className="p-3 rounded-full border border-transparent text-sky-800 hover:animate-border-clockwise"
+                    onClick={() => setCurrentPage(1)}
+                    disabled={currentPage === numberOfPages}
+                >
+                    First
+                </button>
+                <button
                     className="p-3 rounded-full bg-sky-800 text-white"
                     onClick={prevPage}
                     disabled={currentPage === 1}
@@ -235,6 +242,13 @@ function Table({ data, updateData, handlePageChange }) {
                     disabled={currentPage === numberOfPages}
                 >
                     Next
+                </button>
+                <button
+                    className="p-3 rounded-full border border-transparent text-sky-800 hover:animate-border-clockwise"
+                    onClick={() => setCurrentPage(numberOfPages)}
+                    disabled={currentPage === numberOfPages}
+                >
+                    Last
                 </button>
             </div>
         </div>
