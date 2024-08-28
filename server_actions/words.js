@@ -3,7 +3,7 @@
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { getServerSession } from "next-auth/next";
 import Word from "@/models/word";
-import { v4 as uuidv4 } from 'uuid';
+import { v4 as uuidv4 } from "uuid";
 
 import { connectDB } from "@/utils/db";
 
@@ -14,8 +14,11 @@ export async function addWord(formData) {
         german: formData.get("germanWord"),
         english: formData.get("englishWord"),
         type: formData.get("type"),
-        uuid: uuidv4()
+        uuid: uuidv4(),
     };
+    if (body.german === "" || body.english === "") {
+        return { success: false, error: "All fields are required!!" };
+    }
     try {
         await connectDB();
         if (!session) {

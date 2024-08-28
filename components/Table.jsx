@@ -49,7 +49,7 @@ function Table({ data, updateData, handlePageChange }) {
                 const data = await response.json();
                 if (data.success) {
                     updateData(data.data);
-                    toast.success("Deleted Successfully!")
+                    toast.success("Deleted Successfully!");
                 } else {
                     console.error("Failed to delete word:", data.error);
                 }
@@ -71,7 +71,7 @@ function Table({ data, updateData, handlePageChange }) {
             modal.classList.remove("hidden");
         }
     };
-    
+
     const handleCloseModal = (uuid) => {
         const modal = modalRefs.current[uuid];
         if (modal) {
@@ -114,7 +114,7 @@ function Table({ data, updateData, handlePageChange }) {
                             <tr
                                 className={`${
                                     i % 2 !== 0 ? "bg-gray-200" : ""
-                                } text-center capitalize`}
+                                } text-center`}
                                 key={d.uuid}
                             >
                                 <td>{d.german}</td>
@@ -148,7 +148,9 @@ function Table({ data, updateData, handlePageChange }) {
                                     </button>
 
                                     <div
-                                        ref={(el) => (modalRefs.current[d.uuid] = el)}
+                                        ref={(el) =>
+                                            (modalRefs.current[d.uuid] = el)
+                                        }
                                         className={`fixed inset-0 flex items-center justify-center z-50 hidden`}
                                     >
                                         <div className="bg-white p-4 rounded shadow-lg z-10">
@@ -162,13 +164,19 @@ function Table({ data, updateData, handlePageChange }) {
                                             <div className="flex justify-end mt-4">
                                                 <button
                                                     className="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded mr-2"
-                                                    onClick={() => handleCloseModal(d.uuid)}
+                                                    onClick={() =>
+                                                        handleCloseModal(d.uuid)
+                                                    }
                                                 >
                                                     Cancel
                                                 </button>
                                                 <button
                                                     className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded flex gap-2"
-                                                    onClick={() => handleConfirmDelete(d.uuid)}
+                                                    onClick={() =>
+                                                        handleConfirmDelete(
+                                                            d.uuid
+                                                        )
+                                                    }
                                                     disabled={loading}
                                                 >
                                                     {loading && (
@@ -199,7 +207,9 @@ function Table({ data, updateData, handlePageChange }) {
                                         </div>
                                         <div
                                             className="fixed inset-0 bg-black opacity-50"
-                                            onClick={() => handleCloseModal(d.uuid)}
+                                            onClick={() =>
+                                                handleCloseModal(d.uuid)
+                                            }
                                         ></div>
                                     </div>
                                 </td>
