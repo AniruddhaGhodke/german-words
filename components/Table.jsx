@@ -222,7 +222,7 @@ function Table({ data, updateData, handlePageChange }) {
                 <button
                     className="p-3 rounded-full border border-transparent text-sky-800 hover:animate-border-clockwise"
                     onClick={() => setCurrentPage(1)}
-                    disabled={currentPage === numberOfPages}
+                    disabled={currentPage === 1}
                 >
                     First
                 </button>
