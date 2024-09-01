@@ -104,91 +104,104 @@ const WordForm = ({ onWordAdd, onFilterChange, onSearch }) => {
     const closeModal = () => setModalOpen(false);
 
     return (
-        <div className="py-5 w-11/12 bg-white rounded-lg mt-2 flex flex-col sm:flex-row m-auto">
-            {/* Add Word Button for Mobile */}
-            <button
-                onClick={openModal}
-                className="sm:hidden mb-4 p-2 border border-sky-800 hover:bg-sky-800 text-gray-800 hover:text-white rounded-md shadow-sm"
-            >
-                Add Word
-            </button>
+        <>
+            <div className="py-5 px-5 shadow-lg mx-auto w-11/12 bg-white rounded-lg mt-2 flex flex-col sm:flex-row">
+                {/* Add Word Button for Mobile */}
+                <button
+                    onClick={openModal}
+                    className="sm:hidden mb-4 p-2 border border-sky-800 hover:bg-sky-800 text-gray-800 hover:text-white rounded-md shadow-sm"
+                >
+                    Add Word
+                </button>
 
-            {/* Modal for adding a word */}
-            {isModalOpen && (
-                <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center z-50">
-                    <div className="bg-white p-6 rounded-lg shadow-lg">
-                        <FormTemplate
-                            ref={formRef}
-                            action={handleSubmit}
-                            className="space-y-4"
-                            closeModal={closeModal}
-                            isModal={isModalOpen}
-                            isLoading={isLoading}
-                        />
+                {/* Modal for adding a word */}
+                {isModalOpen && (
+                    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center z-50">
+                        <div className="bg-white p-6 rounded-lg shadow-lg">
+                            <FormTemplate
+                                ref={formRef}
+                                action={handleSubmit}
+                                className="space-y-4"
+                                closeModal={closeModal}
+                                isModal={isModalOpen}
+                                isLoading={isLoading}
+                            />
+                        </div>
                     </div>
+                )}
+
+                {/* Original Form (hidden on mobile) */}
+                <FormTemplate
+                    ref={formRef}
+                    className="hidden sm:flex gap-10 items-end flex-1"
+                    action={handleSubmit}
+                    isModal={isModalOpen}
+                    isLoading={isLoading}
+                    onSearch={onSearch}
+                />
+
+                {/* Filter Forms */}
+                <div className="flex flex-1 flex-col justify-start gap-2 sm:justify-end sm:gap-12 sm:flex-row">
+                    <form className="flex justify-start items-end gap-2 sm:justify-end">
+                        <div className="w-full flex flex-col">
+                            <label
+                                htmlFor="searchWord"
+                                className="block text-sm font-medium text-gray-700"
+                            >
+                                Search:
+                            </label>
+                            <input
+                                type="text"
+                                id="searchWord"
+                                name="searchWord"
+                                className="mt-1 block px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm"
+                                placeholder="Search Word"
+                                onChange={(e) => onSearch(e.target.value)}
+                            />
+                        </div>
+                    </form>
+
+                    <form className="flex justify-start items-end gap-2 sm:justify-end">
+                        <div className="w-full flex flex-col">
+                            <label
+                                htmlFor="filterWords"
+                                className="block text-sm font-medium text-gray-700"
+                            >
+                                Filter:
+                            </label>
+                            <select
+                                id="filterWords"
+                                name="filterWords"
+                                onChange={(e) => onFilterChange(e.target.value)}
+                                className="mt-1 block w-full pl-3 pr-10 py-2 text-base outline-1 border border-gray-300 outline-gray-300 focus:bg-sky-50 rounded-md"
+                            >
+                                <option>All</option>
+                                <option>Noun</option>
+                                <option>Verb</option>
+                                <option>Adjective</option>
+                                <option>Adverb</option>
+                                <option>Pronoun</option>
+                            </select>
+                        </div>
+                    </form>
                 </div>
-            )}
-
-            {/* Original Form (hidden on mobile) */}
-            <FormTemplate
-                ref={formRef}
-                className="hidden sm:flex gap-10 items-end flex-1"
-                action={handleSubmit}
-                isModal={isModalOpen}
-                isLoading={isLoading}
-            />
-
-            {/* Filter Forms */}
-            <div className="flex flex-1 flex-col justify-start gap-2 sm:justify-end sm:gap-12 sm:flex-row">
-                <form className="flex justify-start items-end gap-2 sm:justify-end">
-                    <div className="w-full flex flex-col">
-                        <label
-                            htmlFor="searchWord"
-                            className="block text-sm font-medium text-gray-700"
-                        >
-                            Search:
-                        </label>
-                        <input
-                            type="text"
-                            id="searchWord"
-                            name="searchWord"
-                            className="mt-1 block px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm"
-                            placeholder="Search Word"
-                            onChange={(e) => onSearch(e.target.value)}
-                        />
-                    </div>
-                </form>
-
-                <form className="flex justify-start items-end gap-2 sm:justify-end">
-                    <div className="w-full flex flex-col">
-                        <label
-                            htmlFor="filterWords"
-                            className="block text-sm font-medium text-gray-700"
-                        >
-                            Filter:
-                        </label>
-                        <select
-                            id="filterWords"
-                            name="filterWords"
-                            onChange={(e) => onFilterChange(e.target.value)}
-                            className="mt-1 block w-full pl-3 pr-10 py-2 text-base outline-1 border border-gray-300 outline-gray-300 focus:bg-sky-50 rounded-md"
-                        >
-                            <option>All</option>
-                            <option>Noun</option>
-                            <option>Verb</option>
-                            <option>Adjective</option>
-                            <option>Adverb</option>
-                            <option>Pronoun</option>
-                        </select>
-                    </div>
-                </form>
             </div>
-        </div>
+        </>
     );
 };
 
 const FormTemplate = React.forwardRef(
-    ({ action, isModal, closeModal, isLoading, ...props }, ref) => {
+    (
+        {
+            action,
+            isModal,
+            closeModal,
+            isLoading,
+            onSearch = () => {},
+            ...props
+        },
+        ref
+    ) => {
         return (
             <form ref={ref} action={action} {...props}>
                 <div>
@@ -204,6 +217,7 @@ const FormTemplate = React.forwardRef(
                         name="germanWord"
                         className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm"
                         placeholder="Enter German word"
+                        onChange={(e) => onSearch(e.target.value)}
                     />
                 </div>
                 <div>
@@ -219,6 +233,7 @@ const FormTemplate = React.forwardRef(
                         name="englishWord"
                         className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm"
                         placeholder="Enter English word"
+                        onChange={(e) => onSearch(e.target.value)}
                     />
                 </div>
                 <div>

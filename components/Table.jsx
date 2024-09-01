@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from "react";
+import { motion } from "framer-motion";
 import toast from "react-hot-toast";
 
 const HEADERS = ["German word", "English word", "Type", "Actions"];
 
-function Table({ data, updateData, handlePageChange }) {
+export default function Component({ data, updateData, handlePageChange }) {
     const [currentPage, setCurrentPage] = useState(1);
     const [loading, setLoading] = useState(false);
     const nbPerPage = 10;
@@ -12,25 +13,15 @@ function Table({ data, updateData, handlePageChange }) {
     const numberOfPages = Math.ceil(data.length / nbPerPage);
     const records = data.slice(startIndex, lastIndex);
 
+    const modalRefs = useRef({});
+
     function handleSpeak(speakword) {
         if ("speechSynthesis" in window) {
             const utterance = new SpeechSynthesisUtterance(speakword);
             utterance.lang = "de-DE";
             speechSynthesis.speak(utterance);
         } else {
-            alert("SpeechSynthesis is not supported in this browser");
-        }
-    }
-
-    function nextPage() {
-        if (currentPage < numberOfPages) {
-            setCurrentPage((prev) => prev + 1);
-        }
-    }
-
-    function prevPage() {
-        if (currentPage > 1) {
-            setCurrentPage((prev) => prev - 1);
+            toast.error("SpeechSynthesis is not supported in this browser");
         }
     }
 
@@ -39,9 +30,7 @@ function Table({ data, updateData, handlePageChange }) {
         try {
             const response = await fetch("/api/words", {
                 method: "DELETE",
-                headers: {
-                    "Content-Type": "application/json",
-                },
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ uuid }),
             });
 
@@ -51,80 +40,90 @@ function Table({ data, updateData, handlePageChange }) {
                     updateData(data.data);
                     toast.success("Deleted Successfully!");
                 } else {
-                    console.error("Failed to delete word:", data.error);
+                    toast.error("Failed to delete word");
                 }
             } else {
-                console.error("Server error:", response.status);
+                toast.error("Server error");
             }
         } catch (error) {
-            console.error("Request failed:", error);
+            toast.error("Request failed");
         } finally {
             setLoading(false);
-            handleCloseModal();
+            handleCloseModal(uuid);
         }
     }
-    const modalRefs = useRef({});
 
     const handleOpenModal = (uuid) => {
-        const modal = modalRefs.current[uuid];
-        if (modal) {
-            modal.classList.remove("hidden");
-        }
+        modalRefs.current[uuid]?.classList.remove("hidden");
     };
 
     const handleCloseModal = (uuid) => {
-        const modal = modalRefs.current[uuid];
-        if (modal) {
-            modal.classList.add("hidden");
-        }
+        modalRefs.current[uuid]?.classList.add("hidden");
     };
 
-    const handleConfirmDelete = (uuid) => {
-        handleDelete(uuid);
-    };
-
-    // Reset to first page when data changes
     useEffect(() => {
         setCurrentPage(1);
     }, [handlePageChange]);
 
     return (
-        <div>
-            <div className="rounded-xl overflow-hidden w-11/12 m-auto mt-10 shadow-xl">
-                <table className="w-full table-fixed text-sm sm:text-base">
+        <motion.div
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="w-11/12 mx-auto mt-10"
+        >
+            <motion.div
+                className="overflow-hidden rounded-xl shadow-xl bg-white"
+                whileHover={{
+                    boxShadow:
+                        "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+                }}
+            >
+                <table className="w-full table-fixed text-sm sm:text-base overflow-hidden">
                     <thead>
                         <tr className="bg-sky-800 text-white">
                             {HEADERS.map((header, index) => (
-                                <th
+                                <motion.th
                                     key={index}
-                                    scope="col"
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    transition={{ delay: index * 0.1 }}
                                     className={`${
                                         index === 2
                                             ? "hidden sm:table-cell"
                                             : ""
-                                    } capitalize py-2`}
+                                    } capitalize py-3 px-4`}
                                 >
                                     {header}
-                                </th>
+                                </motion.th>
                             ))}
                         </tr>
                     </thead>
                     <tbody>
                         {records.map((d, i) => (
-                            <tr
-                                className={`${
-                                    i % 2 !== 0 ? "bg-gray-200" : ""
-                                } text-center`}
+                            <motion.tr
                                 key={d.uuid}
+                                initial={{ opacity: 0, x: -50 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: 50 }}
+                                transition={{
+                                    duration: 0.3,
+                                    delay: i * 0.05,
+                                }}
+                                className={`${
+                                    i % 2 !== 0 ? "bg-gray-100" : ""
+                                } text-center hover:bg-sky-50 transition-colors duration-200`}
                             >
-                                <td>{d.german}</td>
-                                <td>{d.english}</td>
-                                <td className="hidden sm:table-cell">
+                                <td className="py-3 px-4">{d.german}</td>
+                                <td className="py-3 px-4">{d.english}</td>
+                                <td className="hidden sm:table-cell py-3 px-4">
                                     {d.type || "Any"}
                                 </td>
-                                <td>
-                                    <button
-                                        className="bg-transparent hover:text-white py-1 px-2 my-2 rounded"
+                                <td className="py-3 px-4">
+                                    <motion.button
+                                        whileHover={{ scale: 1.1 }}
+                                        whileTap={{ scale: 0.9 }}
+                                        className="bg-transparent text-sky-800 p-2 rounded-full hover:bg-sky-100 transition-colors duration-200 mr-2"
                                         onClick={() => handleSpeak(d.german)}
                                         aria-label="Speak"
                                     >
@@ -133,49 +132,76 @@ function Table({ data, updateData, handlePageChange }) {
                                             alt="Speak Icon"
                                             className="h-5 w-5"
                                         />
-                                    </button>
-
-                                    <button
-                                        className="bg-transparent py-1 px-2 my-2 ml-2 rounded"
-                                        aria-label="Delete"
+                                    </motion.button>
+                                    <motion.button
+                                        whileHover={{ scale: 1.1 }}
+                                        whileTap={{ scale: 0.9 }}
+                                        className="bg-transparent text-red-600 p-2 rounded-full hover:bg-red-100 transition-colors duration-200"
                                         onClick={() => handleOpenModal(d.uuid)}
+                                        aria-label="Delete"
                                     >
                                         <img
                                             src="/delete.svg"
                                             alt="Delete Icon"
                                             className="h-5 w-5"
                                         />
-                                    </button>
-
+                                    </motion.button>
                                     <div
                                         ref={(el) =>
                                             (modalRefs.current[d.uuid] = el)
                                         }
-                                        className={`fixed inset-0 flex items-center justify-center z-50 hidden`}
+                                        className="fixed inset-0 flex items-center justify-center z-50 hidden"
                                     >
-                                        <div className="bg-white p-4 rounded shadow-lg z-10">
-                                            <p>
+                                        <motion.div
+                                            initial={{
+                                                opacity: 0,
+                                                scale: 0.8,
+                                            }}
+                                            animate={{
+                                                opacity: 1,
+                                                scale: 1,
+                                            }}
+                                            exit={{
+                                                opacity: 0,
+                                                scale: 0.8,
+                                            }}
+                                            className="bg-white p-6 rounded-lg shadow-xl z-10 max-w-sm w-full"
+                                        >
+                                            <h3 className="text-lg font-semibold mb-4">
+                                                Confirm Deletion
+                                            </h3>
+                                            <p className="mb-6">
                                                 Are you sure you want to delete{" "}
                                                 <span className="font-bold">
                                                     {d.german}
                                                 </span>
                                                 ?
                                             </p>
-                                            <div className="flex justify-end mt-4">
-                                                <button
-                                                    className="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded mr-2"
+                                            <div className="flex justify-end space-x-4">
+                                                <motion.button
+                                                    whileHover={{
+                                                        scale: 1.05,
+                                                    }}
+                                                    whileTap={{
+                                                        scale: 0.95,
+                                                    }}
+                                                    className="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 transition-colors duration-200"
                                                     onClick={() =>
                                                         handleCloseModal(d.uuid)
                                                     }
                                                 >
                                                     Cancel
-                                                </button>
-                                                <button
-                                                    className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded flex gap-2"
+                                                </motion.button>
+                                                <motion.button
+                                                    whileHover={{
+                                                        scale: 1.05,
+                                                    }}
+                                                    whileTap={{
+                                                        scale: 0.95,
+                                                    }}
+                                                    className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors duration-200 flex items-center"
                                                     onClick={() =>
-                                                        handleConfirmDelete(
-                                                            d.uuid
-                                                        )
+                                                        handleDelete(d.uuid)
                                                     }
                                                     disabled={loading}
                                                 >
@@ -202,9 +228,9 @@ function Table({ data, updateData, handlePageChange }) {
                                                         </svg>
                                                     )}
                                                     Confirm
-                                                </button>
+                                                </motion.button>
                                             </div>
-                                        </div>
+                                        </motion.div>
                                         <div
                                             className="fixed inset-0 bg-black opacity-50"
                                             onClick={() =>
@@ -213,46 +239,69 @@ function Table({ data, updateData, handlePageChange }) {
                                         ></div>
                                     </div>
                                 </td>
-                            </tr>
+                            </motion.tr>
                         ))}
                     </tbody>
                 </table>
-            </div>
-            <div className="w-full flex justify-center space-x-4 my-4 items-center">
-                <button
-                    className="p-3 rounded-full border border-transparent text-sky-800 hover:animate-border-clockwise"
+            </motion.div>
+            <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.5 }}
+                className="flex justify-center space-x-4 my-10 items-center"
+            >
+                <PageButton
                     onClick={() => setCurrentPage(1)}
                     disabled={currentPage === 1}
                 >
                     First
-                </button>
-                <button
-                    className="p-3 rounded-full bg-sky-800 text-white"
-                    onClick={prevPage}
+                </PageButton>
+                <PageButton
+                    onClick={() =>
+                        setCurrentPage((prev) => Math.max(prev - 1, 1))
+                    }
                     disabled={currentPage === 1}
                 >
                     Prev
-                </button>
-                <span>
+                </PageButton>
+                <span className="text-sky-800 font-medium">
                     {currentPage} / {numberOfPages}
                 </span>
-                <button
-                    className="p-3 rounded-full bg-sky-800 text-white"
-                    onClick={nextPage}
+                <PageButton
+                    onClick={() =>
+                        setCurrentPage((prev) =>
+                            Math.min(prev + 1, numberOfPages)
+                        )
+                    }
                     disabled={currentPage === numberOfPages}
                 >
                     Next
-                </button>
-                <button
-                    className="p-3 rounded-full border border-transparent text-sky-800 hover:animate-border-clockwise"
+                </PageButton>
+                <PageButton
                     onClick={() => setCurrentPage(numberOfPages)}
                     disabled={currentPage === numberOfPages}
                 >
                     Last
-                </button>
-            </div>
-        </div>
+                </PageButton>
+            </motion.div>
+        </motion.div>
     );
 }
 
-export default Table;
+function PageButton({ children, onClick, disabled }) {
+    return (
+        <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className={`px-4 py-2 rounded-full ${
+                disabled
+                    ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                    : "bg-sky-800 text-white hover:bg-sky-700 transition-colors duration-200"
+            }`}
+            onClick={onClick}
+            disabled={disabled}
+        >
+            {children}
+        </motion.button>
+    );
+}
