@@ -15,7 +15,9 @@ const Home = async () => {
     return (
         <div className="min-h-screen">
             <Header session={name} />
-            {session ? <Accordion session={isLoggedIn} /> : null}
+            {session ? (
+                <Accordion session={isLoggedIn} rate={process.env.SPEAK_RATE} />
+            ) : null}
         </div>
     );
 };

@@ -4,7 +4,12 @@ import toast from "react-hot-toast";
 
 const HEADERS = ["German word", "English word", "Type", "Actions"];
 
-export default function Component({ data, updateData, handlePageChange }) {
+export default function Component({
+    data,
+    updateData,
+    handlePageChange,
+    rate,
+}) {
     const [currentPage, setCurrentPage] = useState(1);
     const [loading, setLoading] = useState(false);
     const nbPerPage = 10;
@@ -19,6 +24,9 @@ export default function Component({ data, updateData, handlePageChange }) {
         if ("speechSynthesis" in window) {
             const utterance = new SpeechSynthesisUtterance(speakword);
             utterance.lang = "de-DE";
+            utterance.rate = rate;
+            console.log(rate);
+
             speechSynthesis.speak(utterance);
         } else {
             toast.error("SpeechSynthesis is not supported in this browser");

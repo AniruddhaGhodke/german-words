@@ -6,7 +6,7 @@ import toast from "react-hot-toast";
 import Table from "./Table";
 import TableSkeleton from "./TableSkeleton";
 
-const Accordion = () => {
+const Accordion = ({ rate }) => {
     const [data, setData] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [filterData, setFilterData] = useState([]);
@@ -72,6 +72,7 @@ const Accordion = () => {
                     data={filterData.length ? filterData : data}
                     updateData={handleSetData}
                     handlePageChange={isFiltered}
+                    rate={rate}
                 />
             ) : (
                 <p className="mt-20 w-full flex justify-center text-red-600 text-2xl">
