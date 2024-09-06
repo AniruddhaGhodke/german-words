@@ -89,7 +89,7 @@ export default function Component({
             >
                 <table className="w-full table-fixed text-sm sm:text-base overflow-hidden">
                     <thead>
-                        <tr className="bg-sky-800 text-white">
+                        <tr className="bg-primary text-gray-300">
                             {HEADERS.map((header, index) => (
                                 <motion.th
                                     key={index}
@@ -118,9 +118,7 @@ export default function Component({
                                     duration: 0.3,
                                     delay: i * 0.05,
                                 }}
-                                className={`${
-                                    i % 2 !== 0 ? "bg-gray-100" : ""
-                                } text-center hover:bg-sky-50 transition-colors duration-200`}
+                                className={`${"bg-gray-100"} text-center hover:bg-teriary-100 transition-colors duration-200`}
                             >
                                 <td className="py-3 px-4">{d.german}</td>
                                 <td className="py-3 px-4">{d.english}</td>
@@ -272,7 +270,7 @@ export default function Component({
                 >
                     Prev
                 </PageButton>
-                <span className="text-sky-800 font-medium">
+                <span className="text-primary font-bold">
                     {currentPage} / {numberOfPages}
                 </span>
                 <PageButton
@@ -303,8 +301,8 @@ function PageButton({ children, onClick, disabled }) {
             whileTap={{ scale: 0.95 }}
             className={`px-4 py-2 rounded-full ${
                 disabled
-                    ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                    : "bg-sky-800 text-white hover:bg-sky-700 transition-colors duration-200"
+                    ? "bg-gray-300 text-gray-400 cursor-not-allowed"
+                    : "bg-primary text-gray-200"
             }`}
             onClick={onClick}
             disabled={disabled}

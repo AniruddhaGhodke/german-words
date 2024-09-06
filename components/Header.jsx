@@ -11,16 +11,15 @@ export default function Header({ session }) {
         router.push("/login");
     };
     return (
-        <header className="bg-gradient-to-r from-black via-red-600 to-yellow-400 text-white w-full sticky top-0 left-0 z-10">
-            <div className="absolute inset-0 bg-black opacity-40"></div>
+        <header className="bg-transparent text-white w-full top-0 left-0 z-10">
+            <div className="absolute inset-0 opacity-40"></div>
             <div className="relative max-w-screen-xl mx-auto flex justify-between items-center p-4">
-                <div>
-                    Hello! <span className="text-white font-bold">{session}</span>
-                </div>
+                <div className="bg-[url('/logo.svg')] w-20 h-20 bg-cover bg-no-repeat text-[hsl(199,60%,55%)]" />
+
                 {session ? (
                     <button
                         onClick={handleSignOut}
-                        className="bg-gray-900 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded"
+                        className="bg-gray-900 hover:bg-gray-700 text-[hsl(199,60%,55%)] font-bold py-2 px-4 rounded"
                     >
                         Sign Out
                     </button>

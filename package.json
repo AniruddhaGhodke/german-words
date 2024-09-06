@@ -1,27 +1,27 @@
 {
-  "name": "german-words",
-  "version": "0.1.0",
-  "private": true,
-  "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint"
-  },
-  "dependencies": {
-    "bcryptjs": "^2.4.3",
-    "framer-motion": "^11.3.31",
-    "mongodb": "^6.8.0",
-    "mongoose": "^8.5.3",
-    "next": "14.2.5",
-    "next-auth": "^4.24.7",
-    "react": "^18",
-    "react-dom": "^18",
-    "react-hot-toast": "^2.4.1",
-    "uuid": "^10.0.0"
-  },
-  "devDependencies": {
-    "postcss": "^8",
-    "tailwindcss": "^3.2.0"
-  }
+    "name": "german-words",
+    "version": "0.1.0",
+    "private": true,
+    "scripts": {
+        "dev": "next dev",
+        "build": "next build",
+        "start": "next start",
+        "lint": "next lint"
+    },
+    "dependencies": {
+        "bcryptjs": "^2.4.3",
+        "framer-motion": "^11.5.4",
+        "mongodb": "^6.8.0",
+        "mongoose": "^8.5.3",
+        "next": "14.2.5",
+        "next-auth": "^4.24.7",
+        "react": "^18",
+        "react-dom": "^18",
+        "react-hot-toast": "^2.4.1",
+        "uuid": "^10.0.0"
+    },
+    "devDependencies": {
+        "postcss": "^8",
+        "tailwindcss": "^3.2.0"
+    }
 }

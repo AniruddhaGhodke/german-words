@@ -5,6 +5,7 @@ import React, { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import Table from "./Table";
 import TableSkeleton from "./TableSkeleton";
+import { motion } from "framer-motion";
 
 const Accordion = ({ rate }) => {
     const [data, setData] = useState([]);
@@ -106,7 +107,7 @@ const WordForm = ({ onWordAdd, onFilterChange, onSearch }) => {
 
     return (
         <>
-            <div className="py-5 px-5 shadow-lg mx-auto w-11/12 bg-white rounded-lg mt-2 flex flex-col sm:flex-row">
+            <div className="py-5 px-5 shadow-lg mx-auto w-11/12 bg-gray-100 rounded-lg flex flex-col sm:flex-row">
                 {/* Add Word Button for Mobile */}
                 <button
                     onClick={openModal}
@@ -155,7 +156,7 @@ const WordForm = ({ onWordAdd, onFilterChange, onSearch }) => {
                                 type="text"
                                 id="searchWord"
                                 name="searchWord"
-                                className="mt-1 block px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm"
+                                className="mt-1 block px-3 py-2 bg-gray-100 border border-gray-300 rounded-md shadow-sm focus:bg-secondary-100"
                                 placeholder="Search Word"
                                 onChange={(e) => onSearch(e.target.value)}
                             />
@@ -168,13 +169,13 @@ const WordForm = ({ onWordAdd, onFilterChange, onSearch }) => {
                                 htmlFor="filterWords"
                                 className="block text-sm font-medium text-gray-700"
                             >
-                                Filter:
+                                Sort By:
                             </label>
                             <select
                                 id="filterWords"
                                 name="filterWords"
                                 onChange={(e) => onFilterChange(e.target.value)}
-                                className="mt-1 block w-full pl-3 pr-10 py-2 text-base outline-1 border border-gray-300 outline-gray-300 focus:bg-sky-50 rounded-md"
+                                className="mt-1 block w-full pl-3 pr-10 py-2 text-base bg-gray-100 outline-1 border border-gray-300 outline-gray-300 focus:bg-secondary-100 rounded-md"
                             >
                                 <option>All</option>
                                 <option>Noun</option>
@@ -216,7 +217,7 @@ const FormTemplate = React.forwardRef(
                         type="text"
                         id="germanWord"
                         name="germanWord"
-                        className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm"
+                        className="mt-1 block w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-md shadow-sm focus:bg-secondary-100"
                         placeholder="Enter German word"
                         onChange={(e) => onSearch(e.target.value)}
                     />
@@ -232,7 +233,7 @@ const FormTemplate = React.forwardRef(
                         type="text"
                         id="englishWord"
                         name="englishWord"
-                        className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm"
+                        className="mt-1 block w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-md shadow-sm focus:bg-secondary-100"
                         placeholder="Enter English word"
                         onChange={(e) => onSearch(e.target.value)}
                     />
@@ -247,7 +248,7 @@ const FormTemplate = React.forwardRef(
                     <select
                         id="type"
                         name="type"
-                        className="mt-1 block w-full pl-3 pr-10 py-2 text-base outline-1 border border-gray-300 outline-gray-300 focus:bg-sky-50 rounded-md"
+                        className="mt-1 block w-full pl-3 pr-10 py-2 text-base bg-gray-100 outline-1 border border-gray-300 outline-gray-300 focus:bg-secondary-100 rounded-md"
                     >
                         <option>Noun</option>
                         <option>Verb</option>
@@ -256,12 +257,20 @@ const FormTemplate = React.forwardRef(
                         <option>Pronoun</option>
                     </select>
                 </div>
-                <button
+                <motion.button
+                    whileHover={{
+                        scale: 1.1,
+                        transition: {
+                            delay: 0.2, // Delay in seconds
+                            duration: 0.2, // Animation duration
+                        },
+                    }}
+                    whileTap={{ scale: 0.95 }}
                     type="submit"
                     disabled={isLoading}
                     className={`${
                         isModal ? "w-full" : "w-auto"
-                    } flex justify-center py-2 px-4 border border-sky-800 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-sky-800 hover:text-white transition-colors`}
+                    } flex justify-center py-2 px-4 rounded-md shadow-sm text-sm font-medium bg-gray-200 text-primary hover:bg-teriary hover:text-gray-100 transition-colors`}
                 >
                     {isLoading && (
                         <svg
@@ -286,7 +295,7 @@ const FormTemplate = React.forwardRef(
                         </svg>
                     )}
                     Add
-                </button>
+                </motion.button>
                 {isModal ? (
                     <button
                         type="button"
