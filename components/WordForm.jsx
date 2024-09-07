@@ -6,6 +6,7 @@ import toast from "react-hot-toast";
 import Table from "./Table";
 import TableSkeleton from "./TableSkeleton";
 import { motion } from "framer-motion";
+import { Translate } from "@/server_actions/translate";
 
 const Accordion = ({ rate }) => {
     const [data, setData] = useState([]);
@@ -74,6 +75,8 @@ const Accordion = ({ rate }) => {
                     updateData={handleSetData}
                     handlePageChange={isFiltered}
                     rate={rate}
+                    onFilterChange={handleFilter}
+                    onSearch={handleSearch}
                 />
             ) : (
                 <p className="mt-20 w-full flex justify-center text-red-600 text-2xl">
@@ -141,52 +144,6 @@ const WordForm = ({ onWordAdd, onFilterChange, onSearch }) => {
                     isLoading={isLoading}
                     onSearch={onSearch}
                 />
-
-                {/* Filter Forms */}
-                <div className="flex flex-1 flex-col justify-start gap-2 sm:justify-end sm:gap-12 sm:flex-row">
-                    <form className="flex justify-start items-end gap-2 sm:justify-end">
-                        <div className="w-full flex flex-col">
-                            <label
-                                htmlFor="searchWord"
-                                className="block text-sm font-medium text-gray-700"
-                            >
-                                Search:
-                            </label>
-                            <input
-                                type="text"
-                                id="searchWord"
-                                name="searchWord"
-                                className="mt-1 block px-3 py-2 bg-gray-100 border border-gray-300 rounded-md shadow-sm focus:bg-secondary-100"
-                                placeholder="Search Word"
-                                onChange={(e) => onSearch(e.target.value)}
-                            />
-                        </div>
-                    </form>
-
-                    <form className="flex justify-start items-end gap-2 sm:justify-end">
-                        <div className="w-full flex flex-col">
-                            <label
-                                htmlFor="filterWords"
-                                className="block text-sm font-medium text-gray-700"
-                            >
-                                Sort By:
-                            </label>
-                            <select
-                                id="filterWords"
-                                name="filterWords"
-                                onChange={(e) => onFilterChange(e.target.value)}
-                                className="mt-1 block w-full pl-3 pr-10 py-2 text-base bg-gray-100 outline-1 border border-gray-300 outline-gray-300 focus:bg-secondary-100 rounded-md"
-                            >
-                                <option>All</option>
-                                <option>Noun</option>
-                                <option>Verb</option>
-                                <option>Adjective</option>
-                                <option>Adverb</option>
-                                <option>Pronoun</option>
-                            </select>
-                        </div>
-                    </form>
-                </div>
             </div>
         </>
     );
@@ -204,6 +161,22 @@ const FormTemplate = React.forwardRef(
         },
         ref
     ) => {
+        const germanRef = useRef();
+        const englishRef = useRef();
+        const handleClick = async () => {
+            const formData = new FormData(ref.current);
+            const result = await Translate(formData);
+
+            if (result.success) {
+                if (result["en-US"]) {
+                    englishRef.current.value = result["en-US"];
+                }
+                if (result.de) {
+                    germanRef.current.value = result.de;
+                }
+            }
+        };
+
         return (
             <form ref={ref} action={action} {...props}>
                 <div>
@@ -217,6 +190,7 @@ const FormTemplate = React.forwardRef(
                         type="text"
                         id="germanWord"
                         name="germanWord"
+                        ref={germanRef}
                         className="mt-1 block w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-md shadow-sm focus:bg-secondary-100"
                         placeholder="Enter German word"
                         onChange={(e) => onSearch(e.target.value)}
@@ -233,6 +207,7 @@ const FormTemplate = React.forwardRef(
                         type="text"
                         id="englishWord"
                         name="englishWord"
+                        ref={englishRef}
                         className="mt-1 block w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-md shadow-sm focus:bg-secondary-100"
                         placeholder="Enter English word"
                         onChange={(e) => onSearch(e.target.value)}
@@ -295,6 +270,24 @@ const FormTemplate = React.forwardRef(
                         </svg>
                     )}
                     Add
+                </motion.button>
+                <motion.button
+                    whileHover={{
+                        scale: 1.1,
+                        transition: {
+                            delay: 0.2, // Delay in seconds
+                            duration: 0.2, // Animation duration
+                        },
+                    }}
+                    whileTap={{ scale: 0.95 }}
+                    type="button"
+                    onClick={handleClick}
+                    disabled={isLoading}
+                    className={`${
+                        isModal ? "w-full" : "w-auto"
+                    } flex justify-center py-2 px-4 rounded-md shadow-sm text-sm font-medium bg-gray-200 text-primary hover:bg-teriary hover:text-gray-100 transition-colors`}
+                >
+                    Translate
                 </motion.button>
                 {isModal ? (
                     <button

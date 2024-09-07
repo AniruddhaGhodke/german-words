@@ -44,7 +44,7 @@ module.exports = {
                 "teriary-700": "hsl(21 90% 80% / 1)",
             },
             fontFamily: {
-                nerko: ["Nerko One", "cursive"], // Add SUSE font
+                nerko: ["Nerko One", "cursive"],
             },
         },
     },

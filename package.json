@@ -10,6 +10,7 @@
     },
     "dependencies": {
         "bcryptjs": "^2.4.3",
+        "deepl-node": "^1.13.1",
         "framer-motion": "^11.5.4",
         "mongodb": "^6.8.0",
         "mongoose": "^8.5.3",

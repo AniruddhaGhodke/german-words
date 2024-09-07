@@ -9,6 +9,8 @@ export default function Component({
     updateData,
     handlePageChange,
     rate,
+    onSearch,
+    onFilterChange,
 }) {
     const [currentPage, setCurrentPage] = useState(1);
     const [loading, setLoading] = useState(false);
@@ -87,6 +89,54 @@ export default function Component({
                         "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
                 }}
             >
+                <div className="text-gray-300 bg-primary">
+                    <div className="flex flex-col gap-10 p-5 font-normal sm:flex-row">
+                        <form className="flex justify-start items-end sm:justify-end sm:basis-1/3">
+                            <div className="w-full flex items-center gap-2">
+                                <label
+                                    htmlFor="searchWord"
+                                    className="block text-sm font-medium"
+                                >
+                                    Search:
+                                </label>
+                                <input
+                                    type="text"
+                                    id="searchWord"
+                                    name="searchWord"
+                                    className="mt-1 block px-3 py-2 w-full text-primary bg-gray-100 border border-gray-300 rounded-md shadow-sm focus:bg-secondary-100"
+                                    placeholder="Search Word"
+                                    onChange={(e) => onSearch(e.target.value)}
+                                />
+                            </div>
+                        </form>
+
+                        <form className="flex justify-start items-end gap-2 sm:justify-end sm:basis-1/3">
+                            <div className="w-full flex items-center gap-2">
+                                <label
+                                    htmlFor="filterWords"
+                                    className="block text-sm font-medium text-nowrap"
+                                >
+                                    Sort By:
+                                </label>
+                                <select
+                                    id="filterWords"
+                                    name="filterWords"
+                                    onChange={(e) =>
+                                        onFilterChange(e.target.value)
+                                    }
+                                    className="mt-1 block w-full min-w-max pl-3 pr-10 py-2 text-base text-primary bg-gray-100 outline-1 border border-gray-300 outline-gray-300 focus:bg-secondary-100 rounded-md"
+                                >
+                                    <option>All</option>
+                                    <option>Noun</option>
+                                    <option>Verb</option>
+                                    <option>Adjective</option>
+                                    <option>Adverb</option>
+                                    <option>Pronoun</option>
+                                </select>
+                            </div>
+                        </form>
+                    </div>
+                </div>
                 <table className="w-full table-fixed text-sm sm:text-base overflow-hidden">
                     <thead>
                         <tr className="bg-primary text-gray-300">
