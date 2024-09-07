@@ -36,12 +36,16 @@ module.exports = {
                 "border-clockwise": "border-clockwise 0.5s linear forwards",
             },
             colors: {
-                primary: "#001829",
+                primary: "hsl(204.88deg 100% 8.04%);",
+                "primary-900": "hsl(205 100% 15% / 1)",
                 secondary: "#297EA6",
                 "secondary-100": "hsl(199 60% 90% / 1)",
                 teriary: "#f6884d",
                 "teriary-100": "hsl(21 90% 90% / 1)",
                 "teriary-700": "hsl(21 90% 80% / 1)",
+                "teriary-700": "hsl(21 90% 80% / 1)",
+                "teriary-800": "hsl(29 92% 50% / 1)",
+                "teriary-900": "hsl(29 92% 45% / 1)",
             },
             fontFamily: {
                 nerko: ["Nerko One", "cursive"],

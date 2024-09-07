@@ -45,3 +45,27 @@ export async function addWord(formData) {
         return { success: false, error: error.message };
     }
 }
+
+export async function getRandomWords() {
+    // 1. Connect to database
+    await connectDB();
+    // Get the user session
+    const session = await getServerSession(authOptions);
+
+    if (!session) {
+        throw new Error("User is not authenticated");
+    }
+
+    // Find the user document using the session user's email
+    const userDoc = await Word.findOne({ email: session.user.email });
+
+    if (!userDoc || !userDoc.data) {
+        throw new Error("User document or data array not found");
+    }
+
+    // Get 10 random words from the data array
+    const randomWords = userDoc.data
+        .sort(() => 0.5 - Math.random())
+        .slice(0, 2);
+    return JSON.stringify(randomWords);
+}

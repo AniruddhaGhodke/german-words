@@ -15,10 +15,7 @@ const Home = async () => {
     const { name } = user;
     return (
         <>
-            <div className="bg-[url('/svg1.svg')] bg-cover bg-center h-screen">
-                <Header session={name} />
-                <Welcome name={name} />
-            </div>
+            <Welcome name={name} />
             <div
                 className="flex flex-col h-full bg-[url('/blob-haikei-1.svg')] bg-primary bg-cover bg-center min-h-screen pt-20 sm:px-20"
                 id="content"
