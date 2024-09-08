@@ -64,8 +64,15 @@ export async function getRandomWords() {
     }
 
     // Get 10 random words from the data array
-    const randomWords = userDoc.data
-        .sort(() => 0.5 - Math.random())
-        .slice(0, 2);
-    return JSON.stringify(randomWords);
+    const randomTenElements = getRandomElements(userDoc.data, 10);
+    return JSON.stringify(randomTenElements);
 }
+
+const getRandomElements = (arr, num) => {
+    const shuffled = arr.slice(); // Create a copy of the array
+    for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]; // Swap elements
+    }
+    return shuffled.slice(0, num); // Get the first 'num' elements
+};

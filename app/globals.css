@@ -8,3 +8,17 @@
     scroll-behavior: smooth;
     font-family: Poppins, sans-serif;
 }
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.spinner {
+    border-top-color: #3498db;
+    animation: spin 1s linear infinite;
+}

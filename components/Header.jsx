@@ -17,9 +17,9 @@ export default function Header({ session }) {
                 <div className="bg-[url('/logo.svg')] w-20 h-20 bg-cover bg-no-repeat text-[hsl(199,60%,55%)]" />
 
                 {session ? (
-                    <div className="flex gap-3">
+                    <div className="flex gap-3 text-sm sm:text-base">
                         <Link
-                            href="wordGame"
+                            href="/wordGame"
                             className="bg-gray-900 hover:bg-gray-700 text-[hsl(199,60%,55%)] font-bold py-2 px-4 rounded"
                         >
                             Word Challenge

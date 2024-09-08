@@ -1,19 +1,29 @@
 "use client";
 import React from "react";
 import { motion } from "framer-motion";
+import Fuse from "fuse.js";
 
 const EndGame = ({ responses, playAgain }) => {
+    const checkResponse = (response, correctAnswers) => {
+        const fuse = new Fuse(correctAnswers, {
+            includeScore: true,
+            threshold: 0.1, // Adjust this threshold based on your needs
+        });
+        const result = fuse.search(response);
+        return result.length > 0 && result[0].score < 0.1;
+    };
+
     return (
         <div className="bg-[url('/svg1.svg')] bg-cover bg-center relative h-screen pt-28">
             <div className="flex flex-col max-w-screen-xl mx-auto p-4">
                 <motion.div
                     initial={{ scale: 0 }}
-                    animate={{ scale: [0.8, 1.2, 1] }}
+                    animate={{ scale: [0.8, 1.2, 1], rotate: [0, 10, -10, 0] }}
                     transition={{ duration: 0.5, ease: "easeInOut" }}
-                    className="bg-teriary-100 bg-opacity-80 rounded-lg shadow-lg p-6"
+                    className="bg-teriary-100 bg-opacity-80 rounded-lg shadow-lg p-3 sm:p-6"
                 >
-                    <div className="flex flex-1 justify-between">
-                        <h1 className="text-5xl font-bold text-teriary-900 mb-4">
+                    <div className="flex flex-1 justify-between mb-6">
+                        <h1 className="text-2xl sm:text-5xl font-bold text-teriary-900">
                             Game Over!
                         </h1>
                         <motion.button
@@ -32,13 +42,13 @@ const EndGame = ({ responses, playAgain }) => {
                     <table className="w-full table-fixed text-sm sm:text-base overflow-hidden rounded-md">
                         <thead>
                             <tr className="bg-teriary-900 text-white pb-3">
-                                <th className="font-semibold text-xl mb-4">
+                                <th className="font-semibold text-base sm:text-xl mb-4">
                                     German Word
                                 </th>
-                                <th className="font-semibold text-xl mb-4">
+                                <th className="font-semibold text-base sm:text-xl mb-4">
                                     Correct Answer
                                 </th>
-                                <th className="font-semibold text-xl mb-4">
+                                <th className="font-semibold text-base sm:text-xl mb-4">
                                     Your Response
                                 </th>
                             </tr>
@@ -53,8 +63,10 @@ const EndGame = ({ responses, playAgain }) => {
                                     <td>{res.word.english}</td>
                                     <td
                                         className={
-                                            res.response.toLowerCase() ===
-                                            res.word.english.toLowerCase()
+                                            checkResponse(
+                                                res.response.toLowerCase(),
+                                                res.word.english.split(",")
+                                            )
                                                 ? "text-green-500"
                                                 : "text-red-500"
                                         }

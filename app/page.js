@@ -1,7 +1,6 @@
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 
-import Header from "@/components/Header";
 import React from "react";
 import { authOptions } from "./api/auth/[...nextauth]/route";
 import Accordion from "@/components/WordForm";
@@ -19,7 +18,6 @@ const Home = async () => {
             <div
                 className="flex flex-col h-full bg-[url('/blob-haikei-1.svg')] bg-primary bg-cover bg-center min-h-screen pt-20 sm:px-20"
                 id="content"
-                scroll={false}
             >
                 {session ? (
                     <Accordion
