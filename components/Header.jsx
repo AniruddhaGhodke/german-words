@@ -14,7 +14,10 @@ export default function Header({ session }) {
         <header className="bg-primary text-white w-full top-0 left-0 z-10 absolute">
             <div className="absolute inset-0 opacity-40"></div>
             <div className="relative max-w-screen-xl mx-auto flex justify-between items-center p-4">
-                <div className="bg-[url('/logo.svg')] w-20 h-20 bg-cover bg-no-repeat text-[hsl(199,60%,55%)]" />
+                <Link
+                    href="/"
+                    className="bg-[url('/logo.svg')] w-20 h-20 bg-cover bg-no-repeat text-[hsl(199,60%,55%)]"
+                />
 
                 {session ? (
                     <div className="flex gap-3 text-sm sm:text-base">
