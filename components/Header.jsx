@@ -10,8 +10,6 @@ export default function Header({ session }) {
         await signOut({ redirect: false });
         router.refresh();
     };
-    console.log(session);
-
     return (
         <header className="bg-primary text-white w-full top-0 left-0 z-10 absolute">
             <div className="absolute inset-0 opacity-40"></div>
