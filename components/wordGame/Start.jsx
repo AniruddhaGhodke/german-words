@@ -15,13 +15,15 @@ const INSTRUCTIONS = [
 
 const Start = () => {
     return (
-        <div className="bg-[url('/svg1.svg')] bg-cover bg-center relative h-screen pt-28">
+        <div className="bg-[url('/svg1.svg')] bg-cover bg-center relative h-full min-h-screen pt-28">
             <div className="flex flex-col max-w-screen-xl mx-auto p-4">
                 <div className="bg-primary-900 rounded-lg shadow-2xl p-10">
                     <h1 className="text-3xl font-bold text-secondary-100 mb-4">
                         Lets Start the Game!
                     </h1>
-                    <p className="text-secondary-100 mb-4">Instructions: </p>
+                    <p className="text-secondary-100 font-semibold mb-4">
+                        Instructions:{" "}
+                    </p>
                     <ul className="text-secondary-100 mb-4">
                         {INSTRUCTIONS.map((instruction, index) => (
                             <li key={index}>{instruction}</li>

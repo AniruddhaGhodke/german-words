@@ -8,8 +8,10 @@ export default function Header({ session }) {
     const router = useRouter();
     const handleSignOut = async () => {
         await signOut({ redirect: false });
-        router.push("/login");
+        router.refresh();
     };
+    console.log(session);
+
     return (
         <header className="bg-primary text-white w-full top-0 left-0 z-10 absolute">
             <div className="absolute inset-0 opacity-40"></div>
@@ -37,7 +39,7 @@ export default function Header({ session }) {
                 ) : (
                     <div className="flex items-center gap-3">
                         <Link href="/login">
-                            <span className="bg-gray-900 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">
+                            <span className="bg-gray-900 hover:bg-gray-700 text-[hsl(199,60%,55%)] font-bold py-2 px-4 rounded">
                                 Sign In/ Register
                             </span>
                         </Link>

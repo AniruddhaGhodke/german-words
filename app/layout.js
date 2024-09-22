@@ -21,9 +21,6 @@ export const metadata = {
 export default async function RootLayout({ children }) {
     const session = await getServerSession(authOptions);
     const user = session?.user || null;
-    const isLoggedIn = !!user;
-    if (!isLoggedIn) redirect("/login");
-    const { name } = user;
     return (
         <html lang="en">
             <head>
@@ -36,7 +33,7 @@ export default async function RootLayout({ children }) {
                 />
             </head>
             <body className={inter.className}>
-                <Header session={name} />
+                <Header session={user} />
                 <Provider>
                     {children}
 
