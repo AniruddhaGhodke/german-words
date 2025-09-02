@@ -1,10 +1,11 @@
 "use client";
 
-import { signOut } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-export default function Header({ session }) {
+export default function Header() {
+    const { data: session, status } = useSession();
     const router = useRouter();
     const handleSignOut = async () => {
         await signOut({ redirect: false });
@@ -19,8 +20,20 @@ export default function Header({ session }) {
                     className="bg-[url('/logo.svg')] w-20 h-20 bg-cover bg-no-repeat text-[hsl(199,60%,55%)]"
                 />
 
-                {session ? (
+                {status === "loading" ? (
                     <div className="flex gap-3 text-sm sm:text-base">
+                        <div className="bg-gray-900 text-[hsl(199,60%,55%)] font-bold py-2 px-4 rounded animate-pulse">
+                            Loading...
+                        </div>
+                    </div>
+                ) : session ? (
+                    <div className="flex gap-3 text-sm sm:text-base">
+                        <Link
+                            href="/my-stories"
+                            className="bg-gray-900 hover:bg-gray-700 text-[hsl(199,60%,55%)] font-bold py-2 px-4 rounded"
+                        >
+                            My Stories
+                        </Link>
                         <Link
                             href="/wordGame"
                             className="bg-gray-900 hover:bg-gray-700 text-[hsl(199,60%,55%)] font-bold py-2 px-4 rounded"

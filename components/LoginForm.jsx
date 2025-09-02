@@ -2,47 +2,65 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { signIn } from "next-auth/react";
+import { signIn, getSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
+import { isValidEmail } from "@/utils/passwordValidation";
 
 const LoginForm = () => {
     const [error, setError] = useState("");
+    const [isLoading, setIsLoading] = useState(false);
+    const [rememberMe, setRememberMe] = useState(false);
     const router = useRouter();
-    const isValidEmail = (email) => {
-        const emailRegex = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i;
-        return emailRegex.test(email);
-    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        const email = e.target[0].value;
-        const password = e.target[1].value;
+        setIsLoading(true);
+        setError("");
+        
+        const formData = new FormData(e.target);
+        const email = formData.get("email");
+        const password = formData.get("password");
 
         if (!isValidEmail(email)) {
             setError("Email is invalid");
             toast.error("Email is invalid");
+            setIsLoading(false);
             return;
         }
 
         if (!password || password.length < 8) {
             setError("Password is invalid");
             toast.error("Password is invalid");
+            setIsLoading(false);
             return;
         }
-        const res = await signIn("credentials", {
-            redirect: false,
-            email,
-            password,
-        });
-        if (res?.error) {
-            setError("Invalid email or password");
-            toast.error("Invalid email or password");
-        } else {
-            setError("");
-            toast.success("Successful login");
+        
+        try {
+            const res = await signIn("credentials", {
+                redirect: false,
+                email,
+                password,
+                rememberMe,
+            });
+            
+            if (res?.error) {
+                setError("Invalid email or password");
+                toast.error("Invalid email or password");
+            } else {
+                setError("");
+                toast.success("Successful login");
+                // Force session update
+                await getSession();
+                router.push("/");
+                router.refresh();
+            }
+        } catch (error) {
+            setError("Login failed. Please try again.");
+            toast.error("Login failed. Please try again.");
+        } finally {
+            setIsLoading(false);
         }
-        if (res?.url) router.replace("/");
     };
     return (
         <div className="flex min-h-full flex-1 flex-col justify-center py-12 sm:px-6 lg:px-8">
@@ -54,7 +72,7 @@ const LoginForm = () => {
 
             <div className="mt-10 sm:mx-auto sm:w-full sm:max-w-[480px]">
                 <div className="bg-white px-6 py-12 shadow sm:rounded-lg sm:px-12">
-                    <form className="space-y-6" onSubmit={handleSubmit}>
+                    <form className="space-y-6" onSubmit={handleSubmit} noValidate>
                         <div>
                             <label
                                 htmlFor="email"
@@ -69,7 +87,10 @@ const LoginForm = () => {
                                     type="email"
                                     autoComplete="email"
                                     required
+                                    aria-describedby="email-error"
+                                    aria-invalid={error && error.includes("email") ? "true" : "false"}
                                     className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-sky-700 sm:text-sm sm:leading-6 px-2 focus:outline-none focus-visible:outline-2"
+                                    placeholder="Enter your email address"
                                 />
                             </div>
                         </div>
@@ -88,7 +109,10 @@ const LoginForm = () => {
                                     type="password"
                                     autoComplete="current-password"
                                     required
+                                    aria-describedby="password-error"
+                                    aria-invalid={error && error.includes("password") ? "true" : "false"}
                                     className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-sky-700 sm:text-sm sm:leading-6 px-2 focus:outline-none focus-visible:outline-2"
+                                    placeholder="Enter your password"
                                 />
                             </div>
                         </div>
@@ -99,13 +123,15 @@ const LoginForm = () => {
                                     id="remember-me"
                                     name="remember-me"
                                     type="checkbox"
+                                    checked={rememberMe}
+                                    onChange={(e) => setRememberMe(e.target.checked)}
                                     className="h-4 w-4 rounded border-gray-300 text-black focus:ring-black"
                                 />
                                 <label
                                     htmlFor="remember-me"
                                     className="ml-3 block text-sm leading-6 text-gray-900"
                                 >
-                                    Remember me
+                                    Remember me for 30 days
                                 </label>
                             </div>
 
@@ -122,16 +148,16 @@ const LoginForm = () => {
                         <div>
                             <button
                                 type="submit"
-                                className="flex w-full border border-black justify-center rounded-md bg-black px-3 py-1.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-white transition-colors hover:text-black focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+                                disabled={isLoading}
+                                className="flex w-full border border-black justify-center rounded-md bg-black px-3 py-1.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-white transition-colors hover:text-black focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                Sign in
+                                {isLoading ? "Signing in..." : "Sign in"}
                             </button>
                         </div>
 
                         <div>
                             <Link
                                 href="/register"
-                                type="button"
                                 className="flex w-full border border-black justify-center rounded-md bg-black px-3 py-1.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-white transition-colors hover:text-black focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
                             >
                                 Register
@@ -173,9 +199,16 @@ const LoginForm = () => {
                                 </span>
                             </button>
                         </div>
-                        <p className="text-red-600 text-center text-[16px] my-4">
-                            {error && error}
-                        </p>
+                        {error && (
+                            <p 
+                                id="login-error" 
+                                className="text-red-600 text-center text-[16px] my-4"
+                                role="alert"
+                                aria-live="polite"
+                            >
+                                {error}
+                            </p>
+                        )}
                     </div>
                 </div>
             </div>

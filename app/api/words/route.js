@@ -39,7 +39,7 @@ export async function POST(req) {
     }
 }
 
-export async function GET() {
+export async function GET(req) {
     try {
         await connectDB();
         const session = await getServerSession();
@@ -49,10 +49,90 @@ export async function GET() {
                 error: "Unauthorized access",
             });
         }
+        
+        const { searchParams } = new URL(req.url);
+        const page = parseInt(searchParams.get('page')) || 1;
+        const limit = parseInt(searchParams.get('limit')) || 10;
+        const search = searchParams.get('search') || '';
+        const type = searchParams.get('type') || '';
+        const sort = searchParams.get('sort') || '';
+        
         const userEmail = session.user.email;
-        const words = await Word.find({ email: userEmail });
+        const userWords = await Word.findOne({ email: userEmail });
 
-        return NextResponse.json({ success: true, data: words[0] });
+        if (!userWords || !userWords.data) {
+            return NextResponse.json({ 
+                success: true, 
+                data: [], 
+                pagination: {
+                    page: 1,
+                    limit,
+                    total: 0,
+                    totalPages: 0
+                }
+            });
+        }
+
+        let filteredData = [...userWords.data];
+
+        // Apply search filter
+        if (search) {
+            const searchLower = search.toLowerCase();
+            filteredData = filteredData.filter(word => 
+                word.german?.toLowerCase().includes(searchLower) ||
+                word.english?.toLowerCase().includes(searchLower)
+            );
+        }
+
+        // Apply type filter
+        if (type && type.toLowerCase() !== 'all') {
+            filteredData = filteredData.filter(word => 
+                word.type?.toLowerCase() === type.toLowerCase()
+            );
+        }
+
+        // Apply sorting
+        if (sort) {
+            filteredData.sort((a, b) => {
+                switch (sort) {
+                    case 'german-asc':
+                        return a.german?.localeCompare(b.german) || 0;
+                    case 'german-desc':
+                        return b.german?.localeCompare(a.german) || 0;
+                    case 'english-asc':
+                        return a.english?.localeCompare(b.english) || 0;
+                    case 'english-desc':
+                        return b.english?.localeCompare(a.english) || 0;
+                    case 'date-newest':
+                        return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+                    case 'date-oldest':
+                        return new Date(a.createdAt || 0) - new Date(b.createdAt || 0);
+                    case 'type':
+                        return (a.type || '').localeCompare(b.type || '');
+                    default:
+                        return 0;
+                }
+            });
+        }
+
+        const total = filteredData.length;
+        const totalPages = Math.ceil(total / limit);
+        const startIndex = (page - 1) * limit;
+        const endIndex = startIndex + limit;
+        const paginatedData = filteredData.slice(startIndex, endIndex);
+
+        return NextResponse.json({ 
+            success: true, 
+            data: paginatedData,
+            pagination: {
+                page,
+                limit,
+                total,
+                totalPages,
+                hasNext: page < totalPages,
+                hasPrev: page > 1
+            }
+        });
     } catch (error) {
         console.error(error);
         return NextResponse.json({ success: false, error: error.message });

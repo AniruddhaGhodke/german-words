@@ -4,9 +4,7 @@ import Provider from "@/components/Provider";
 
 import { Toaster } from "react-hot-toast";
 import Header from "@/components/Header";
-import { getServerSession } from "next-auth";
-import { redirect } from "next/navigation";
-import { authOptions } from "./api/auth/[...nextauth]/route";
+import Breadcrumb from "@/components/Breadcrumb";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -19,8 +17,6 @@ export const metadata = {
 };
 
 export default async function RootLayout({ children }) {
-    const session = await getServerSession(authOptions);
-    const user = session?.user || null;
     return (
         <html lang="en">
             <head>
@@ -33,8 +29,9 @@ export default async function RootLayout({ children }) {
                 />
             </head>
             <body className={inter.className}>
-                <Header session={user} />
                 <Provider>
+                    <Header />
+                    <Breadcrumb />
                     {children}
 
                     <Toaster

@@ -3,9 +3,13 @@ import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import toast from "react-hot-toast";
+import { validatePassword, isValidEmail, getPasswordStrength } from "@/utils/passwordValidation";
 
 const RegisterPage = () => {
     const [error, setError] = useState("");
+    const [isLoading, setIsLoading] = useState(false);
+    const [password, setPassword] = useState("");
+    const [passwordStrength, setPasswordStrength] = useState(null);
     const router = useRouter();
     const { status: sessionStatus } = useSession();
 
@@ -15,38 +19,53 @@ const RegisterPage = () => {
         }
     }, [sessionStatus, router]);
 
-    const isValidEmail = (email) => {
-        const emailRegex = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i;
-        return emailRegex.test(email);
+    const handlePasswordChange = (e) => {
+        const newPassword = e.target.value;
+        setPassword(newPassword);
+        if (newPassword) {
+            setPasswordStrength(getPasswordStrength(newPassword));
+        } else {
+            setPasswordStrength(null);
+        }
     };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
-        const name = e.target[0].value;
-        const email = e.target[1].value;
-        const password = e.target[2].value;
-        const confirmPassword = e.target[3].value;
+        setIsLoading(true);
+        setError("");
+        
+        const formData = new FormData(e.target);
+        const name = formData.get("name");
+        const email = formData.get("email");
+        const password = formData.get("password");
+        const confirmPassword = formData.get("confirmPassword");
 
-        if (name === '') {
+        if (!name?.trim()) {
             setError("Name is required");
             toast.error("Name is required");
+            setIsLoading(false);
             return;
         }
 
         if (!isValidEmail(email)) {
             setError("Email is invalid");
             toast.error("Email is invalid");
+            setIsLoading(false);
             return;
         }
 
-        if (!password || password.length < 8) {
-            setError("Password is invalid");
-            toast.error("Password is invalid");
+        const passwordValidation = validatePassword(password);
+        if (!passwordValidation.isValid) {
+            setError(passwordValidation.errors[0]);
+            toast.error(passwordValidation.errors[0]);
+            setIsLoading(false);
             return;
         }
 
         if (confirmPassword !== password) {
-            setError("Passwords are not equal");
-            toast.error("Passwords are not equal");
+            setError("Passwords do not match");
+            toast.error("Passwords do not match");
+            setIsLoading(false);
             return;
         }
 
@@ -59,22 +78,33 @@ const RegisterPage = () => {
                 body: JSON.stringify({
                     email,
                     password,
-                    name
+                    name: name.trim()
                 }),
             });
+            
+            const data = await res.json().catch(() => ({}));
+            
             if (res.status === 400) {
-                toast.error("This email is already registered");
-                setError("The email already in use");
-            }
-            if (res.status === 200) {
+                const errorMsg = data.error || "Registration failed";
+                toast.error(errorMsg);
+                setError(errorMsg);
+            } else if (res.status === 429) {
+                toast.error("Too many attempts. Please try again later.");
+                setError("Too many attempts. Please try again later.");
+            } else if (res.status === 200) {
                 setError("");
                 toast.success("Registration successful");
                 router.push("/login");
+            } else {
+                toast.error("Registration failed. Please try again.");
+                setError("Registration failed. Please try again.");
             }
         } catch (error) {
-            toast.error("Error, try again");
-            setError("Error, try again");
-            console.log(error);
+            toast.error("Network error. Please try again.");
+            setError("Network error. Please try again.");
+            console.error("Registration error:", error);
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -143,28 +173,60 @@ const RegisterPage = () => {
                                         id="password"
                                         name="password"
                                         type="password"
-                                        autoComplete="current-password"
+                                        autoComplete="new-password"
                                         required
+                                        value={password}
+                                        onChange={handlePasswordChange}
                                         className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-sky-700 sm:text-sm sm:leading-6 focus:outline-none px-2"
+                                        placeholder="Enter a strong password"
                                     />
                                 </div>
+                                {passwordStrength && password && (
+                                    <div className="mt-2">
+                                        <div className="flex items-center justify-between text-sm">
+                                            <span>Password strength:</span>
+                                            <span style={{ color: passwordStrength.color }} className="font-medium">
+                                                {passwordStrength.label}
+                                            </span>
+                                        </div>
+                                        <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
+                                            <div
+                                                className="h-2 rounded-full transition-all duration-300"
+                                                style={{
+                                                    backgroundColor: passwordStrength.color,
+                                                    width: `${(passwordStrength.score / 7) * 100}%`
+                                                }}
+                                            ></div>
+                                        </div>
+                                        <div className="mt-1 text-xs text-gray-600">
+                                            <p>Password must contain:</p>
+                                            <ul className="list-disc list-inside text-xs mt-1 space-y-0.5">
+                                                <li>At least 8 characters</li>
+                                                <li>Uppercase and lowercase letters</li>
+                                                <li>At least one number</li>
+                                                <li>At least one special character</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
 
                             <div>
                                 <label
-                                    htmlFor="confirmpassword"
+                                    htmlFor="confirmPassword"
                                     className="block text-sm font-medium leading-6 text-gray-900"
                                 >
                                     Confirm password
                                 </label>
                                 <div className="mt-2">
                                     <input
-                                        id="confirmpassword"
-                                        name="confirmpassword"
+                                        id="confirmPassword"
+                                        name="confirmPassword"
                                         type="password"
-                                        autoComplete="current-password"
+                                        autoComplete="new-password"
                                         required
                                         className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-sky-700 sm:text-sm sm:leading-6 px-2 focus:outline-none"
+                                        placeholder="Confirm your password"
                                     />
                                 </div>
                             </div>
@@ -189,9 +251,10 @@ const RegisterPage = () => {
                             <div>
                                 <button
                                     type="submit"
-                                    className="flex w-full border border-black justify-center rounded-md bg-black px-3 py-1.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-white transition-colors hover:text-black focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+                                    disabled={isLoading}
+                                    className="flex w-full border border-black justify-center rounded-md bg-black px-3 py-1.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-white transition-colors hover:text-black focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
-                                    Sign up
+                                    {isLoading ? "Creating account..." : "Sign up"}
                                 </button>
                                 <p className="text-red-600 text-center text-[16px] my-4">
                                     {error && error}
