@@ -4,11 +4,13 @@ import { signOut, useSession } from "next-auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import TTSSelector from "./TTSSelector";
 
 export default function Header() {
     const { data: session, status } = useSession();
     const router = useRouter();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [isTTSSelectorOpen, setIsTTSSelectorOpen] = useState(false);
     
     const handleSignOut = async () => {
         await signOut({ redirect: false });
@@ -17,6 +19,11 @@ export default function Header() {
     
     const toggleMobileMenu = () => {
         setIsMobileMenuOpen(!isMobileMenuOpen);
+    };
+    
+    const openTTSSelector = () => {
+        setIsTTSSelectorOpen(true);
+        setIsMobileMenuOpen(false);
     };
     return (
         <header className="bg-primary text-white w-full top-0 left-0 z-20 absolute">
@@ -51,6 +58,13 @@ export default function Header() {
                                 >
                                     Word Challenge
                                 </Link>
+                                <button
+                                    onClick={openTTSSelector}
+                                    className="bg-gray-900 hover:bg-gray-700 text-[hsl(199,60%,55%)] font-bold py-2 px-3 lg:px-4 rounded whitespace-nowrap"
+                                    title="Voice Settings"
+                                >
+                                    🎤
+                                </button>
                                 <button
                                     onClick={handleSignOut}
                                     className="bg-gray-900 hover:bg-gray-700 text-[hsl(199,60%,55%)] font-bold py-2 px-3 lg:px-4 rounded whitespace-nowrap"
@@ -105,6 +119,12 @@ export default function Header() {
                                 🎯 Word Challenge
                             </Link>
                             <button
+                                onClick={openTTSSelector}
+                                className="block w-full text-left text-[hsl(199,60%,55%)] font-semibold py-3 px-4 rounded hover:bg-gray-800 transition-colors min-h-[44px] flex items-center"
+                            >
+                                🎤 Voice Settings
+                            </button>
+                            <button
                                 onClick={() => {
                                     handleSignOut();
                                     setIsMobileMenuOpen(false);
@@ -117,6 +137,12 @@ export default function Header() {
                     </div>
                 )}
             </div>
+            
+            {/* TTS Selector Modal */}
+            <TTSSelector
+                isOpen={isTTSSelectorOpen}
+                onClose={() => setIsTTSSelectorOpen(false)}
+            />
         </header>
     );
 }

@@ -4,8 +4,6 @@ import toast from "react-hot-toast";
 import FlashcardModal from "./FlashcardModal";
 import PronunciationTrainerModal from "./PronunciationTrainerModal";
 import StoryGeneratorModal from "./StoryGeneratorModal";
-import { speakGermanWord } from "../utils/speechSynthesis";
-
 const HEADERS = ["German word", "English word", "Type", "Actions"];
 
 export default function Component({
@@ -33,14 +31,19 @@ export default function Component({
 
     const modalRefs = useRef({});
 
-    function handleSpeak(speakword) {
-        speakGermanWord(speakword, {
-            rate: rate || 0.8,
-            onStart: () => console.log('Speaking:', speakword),
-            onEnd: () => console.log('Finished speaking:', speakword)
-        }).catch(error => {
+    async function handleSpeak(speakword) {
+        try {
+            // Dynamic import to avoid SSR issues
+            const { speakGermanWord } = await import("../utils/speechSynthesis");
+            await speakGermanWord(speakword, {
+                rate: rate || 0.8,
+                onStart: () => console.log('Speaking:', speakword),
+                onEnd: () => console.log('Finished speaking:', speakword)
+            });
+        } catch (error) {
             console.error('Speech error:', error);
-        });
+            toast.error('Speech synthesis failed. Please try again.');
+        }
     }
 
     async function handleDelete(uuid) {

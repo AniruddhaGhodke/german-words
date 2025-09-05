@@ -1,20 +1,71 @@
 import toast from "react-hot-toast";
 
+// TTS Provider Types
+const TTS_PROVIDERS = {
+    PUTER: 'puter',
+    WEB_SPEECH: 'web_speech',
+    AUTO: 'auto'
+};
+
 // Detect browser type for Safari-specific handling
 const isSafari = () => {
+    if (typeof navigator === 'undefined') return false;
     return /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
 };
 
 const isMobile = () => {
+    if (typeof navigator === 'undefined') return false;
     return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 };
 
 const isIOS = () => {
+    if (typeof navigator === 'undefined') return false;
     return /iPhone|iPad|iPod/i.test(navigator.userAgent);
+};
+
+// Check if Puter.js is available
+const isPuterAvailable = () => {
+    return typeof window !== 'undefined' && window.puter && window.puter.ai && window.puter.ai.txt2speech;
+};
+
+// Get user's preferred TTS provider from localStorage
+const getPreferredProvider = () => {
+    if (typeof localStorage === 'undefined') return TTS_PROVIDERS.AUTO;
+    return localStorage.getItem('tts-provider') || TTS_PROVIDERS.AUTO;
+};
+
+// Set user's preferred TTS provider
+const setPreferredProvider = (provider) => {
+    if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('tts-provider', provider);
+    }
+};
+
+// Smart provider selection based on device and availability
+const selectBestProvider = () => {
+    const preferred = getPreferredProvider();
+    
+    if (preferred !== TTS_PROVIDERS.AUTO) {
+        return preferred;
+    }
+    
+    // Auto-selection logic
+    if (isPuterAvailable()) {
+        // Prefer Puter.js on iOS for better quality
+        if (isIOS()) return TTS_PROVIDERS.PUTER;
+        
+        // Prefer Puter.js for all devices if available
+        return TTS_PROVIDERS.PUTER;
+    }
+    
+    return TTS_PROVIDERS.WEB_SPEECH;
 };
 
 // Initialize speech synthesis and load voices
 const initializeSpeechSynthesis = () => {
+    // Check if we're in a browser environment
+    if (typeof window === 'undefined') return;
+    
     if ("speechSynthesis" in window) {
         // Force voices to load by calling getVoices()
         speechSynthesis.getVoices();
@@ -38,13 +89,17 @@ const initializeSpeechSynthesis = () => {
         };
         
         // Try to initialize on user interaction
-        document.addEventListener('click', enableSpeech, { once: true });
-        document.addEventListener('touchstart', enableSpeech, { once: true });
+        if (typeof document !== 'undefined') {
+            document.addEventListener('click', enableSpeech, { once: true });
+            document.addEventListener('touchstart', enableSpeech, { once: true });
+        }
     }
 };
 
 // Debug function to log available voices
 const logAvailableVoices = () => {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+    
     const voices = speechSynthesis.getVoices();
     console.log('Available voices:', voices.length);
     voices.forEach((voice, index) => {
@@ -56,6 +111,8 @@ const logAvailableVoices = () => {
 
 // Get the best German voice available with Safari optimizations
 const getGermanVoice = () => {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return null;
+    
     const voices = speechSynthesis.getVoices();
     
     // Log available voices for debugging
@@ -73,7 +130,17 @@ const getGermanVoice = () => {
             'Yannick' // Multilingual voice that sometimes works for German
         ];
         
-        // First, try to avoid 'Compact' voices which are lower quality
+        // First, specifically look for Anna since user confirmed it's available and high quality
+        const annaVoice = voices.find(v => 
+            v.name.toLowerCase().includes('anna') && 
+            v.lang.startsWith('de')
+        );
+        if (annaVoice) {
+            console.log('Selected Anna voice (iOS):', annaVoice.name, annaVoice.lang);
+            return annaVoice;
+        }
+        
+        // Try other high-quality voices, avoiding 'Compact' versions
         for (const voiceName of iosPreferred) {
             const voice = voices.find(v => 
                 v.name.includes(voiceName) && 
@@ -123,9 +190,64 @@ const getGermanVoice = () => {
     }
 };
 
-// Enhanced speak function with Safari mobile optimizations
-export const speakGermanWord = (text, options = {}) => {
+// Puter.js Text-to-Speech function
+const speakWithPuter = async (text, options = {}) => {
     return new Promise((resolve, reject) => {
+        if (!isPuterAvailable()) {
+            reject(new Error('Puter.js is not available'));
+            return;
+        }
+
+        const {
+            onStart = () => {},
+            onEnd = () => {},
+            onError = () => {}
+        } = options;
+
+        try {
+            // Use German language for Puter.js
+            const language = 'de-DE';
+            
+            console.log('Using Puter.js TTS for German:', text);
+            onStart();
+
+            window.puter.ai.txt2speech(text, language)
+                .then((audio) => {
+                    if (audio && audio.play) {
+                        // Play the audio and handle events
+                        audio.onended = () => {
+                            console.log('Puter.js TTS completed:', text);
+                            onEnd();
+                            resolve();
+                        };
+                        
+                        audio.onerror = (error) => {
+                            console.error('Puter.js TTS error:', error);
+                            onError(error);
+                            reject(new Error('Puter.js TTS playback failed'));
+                        };
+                        
+                        audio.play();
+                    } else {
+                        throw new Error('Invalid audio object received from Puter.js');
+                    }
+                })
+                .catch((error) => {
+                    console.error('Puter.js TTS synthesis error:', error);
+                    onError(error);
+                    reject(error);
+                });
+        } catch (error) {
+            console.error('Puter.js TTS setup error:', error);
+            onError(error);
+            reject(error);
+        }
+    });
+};
+
+// Web Speech API function (original implementation)
+const speakWithWebSpeech = async (text, options = {}) => {
+    return new Promise(async (resolve, reject) => {
         if (!("speechSynthesis" in window)) {
             const error = "Speech synthesis is not supported in this browser";
             toast.error(error);
@@ -133,8 +255,15 @@ export const speakGermanWord = (text, options = {}) => {
             return;
         }
 
-        // Cancel any ongoing speech
-        speechSynthesis.cancel();
+        // Cancel any ongoing speech with iOS-specific handling
+        if (speechSynthesis.speaking) {
+            speechSynthesis.cancel();
+            
+            // iOS needs extra time to properly cancel speech
+            if (isIOS()) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+        }
 
         // Check for iOS limitations (affects all browsers on iOS)
         if (isIOS()) {
@@ -187,7 +316,20 @@ export const speakGermanWord = (text, options = {}) => {
             
             setTimeout(() => {
                 try {
-                    const utterance = new SpeechSynthesisUtterance(text);
+                    // Preprocess text for better iOS pronunciation
+                    let processedText = text;
+                    if (iosDevice) {
+                        // Clean text for iOS - remove extra spaces, normalize
+                        processedText = text.trim().replace(/\s+/g, ' ');
+                        
+                        // Add slight pauses for complex German words (helps with stuttering)
+                        if (processedText.length > 10) {
+                            // Add tiny pause after compound word separators
+                            processedText = processedText.replace(/([a-z])([A-Z])/g, '$1 $2');
+                        }
+                    }
+                    
+                    const utterance = new SpeechSynthesisUtterance(processedText);
                     
                     // iOS-specific language setting
                     if (iosDevice) {
@@ -196,15 +338,17 @@ export const speakGermanWord = (text, options = {}) => {
                         utterance.lang = "de-DE";
                     }
                     
-                    // iOS-specific rate adjustment (more conservative)
+                    // iOS-specific rate adjustment (match native iOS speech as closely as possible)
                     if (iosDevice) {
-                        utterance.rate = Math.max(0.7, Math.min(1.2, rate)); // More restrictive range for iOS
-                        utterance.pitch = Math.max(0.8, Math.min(1.2, pitch)); // Conservative pitch for iOS
+                        // Use parameters that closely match iOS native speech
+                        utterance.rate = 0.9; // Fixed rate that works best on iOS (ignore user rate)
+                        utterance.pitch = 1.0; // Natural pitch like iOS native speech
+                        utterance.volume = 1.0; // Full volume
                     } else {
                         utterance.rate = Math.max(0.5, Math.min(2.0, rate)); // Normal range for other browsers
                         utterance.pitch = pitch;
+                        utterance.volume = volume;
                     }
-                    utterance.volume = volume;
 
                     // Try to get a German voice
                     const germanVoice = getGermanVoice();
@@ -283,8 +427,75 @@ export const speakGermanWord = (text, options = {}) => {
     });
 };
 
-// Initialize on module load
-initializeSpeechSynthesis();
+// Enhanced main speak function with smart provider selection
+export const speakGermanWord = async (text, options = {}) => {
+    const provider = selectBestProvider();
+    
+    try {
+        switch (provider) {
+            case TTS_PROVIDERS.PUTER:
+                console.log('Attempting Puter.js TTS...');
+                try {
+                    await speakWithPuter(text, options);
+                    return;
+                } catch (error) {
+                    console.warn('Puter.js TTS failed, falling back to Web Speech API:', error);
+                    toast.error('High-quality TTS unavailable, using fallback');
+                    // Fallback to Web Speech API
+                    await speakWithWebSpeech(text, options);
+                    return;
+                }
+                
+            case TTS_PROVIDERS.WEB_SPEECH:
+            default:
+                console.log('Using Web Speech API...');
+                await speakWithWebSpeech(text, options);
+                return;
+        }
+    } catch (error) {
+        console.error('All TTS providers failed:', error);
+        const fallbackError = "Text-to-speech failed. Please try again.";
+        toast.error(fallbackError);
+        throw new Error(fallbackError);
+    }
+};
+
+// Export provider management functions
+export const getTTSProviders = () => TTS_PROVIDERS;
+export const getCurrentProvider = () => selectBestProvider();
+export const setTTSProvider = (provider) => setPreferredProvider(provider);
+export const getAvailableProviders = () => {
+    const available = [];
+    
+    if (isPuterAvailable()) {
+        available.push({
+            id: TTS_PROVIDERS.PUTER,
+            name: 'Puter.js (High Quality)',
+            description: 'Free high-quality German text-to-speech'
+        });
+    }
+    
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        available.push({
+            id: TTS_PROVIDERS.WEB_SPEECH,
+            name: 'Browser Native',
+            description: 'Built-in browser text-to-speech'
+        });
+    }
+    
+    available.push({
+        id: TTS_PROVIDERS.AUTO,
+        name: 'Auto-Select',
+        description: 'Automatically choose the best available option'
+    });
+    
+    return available;
+};
+
+// Initialize on module load (only in browser)
+if (typeof window !== 'undefined') {
+    initializeSpeechSynthesis();
+}
 
 // Export initialization function for manual use
 export { initializeSpeechSynthesis };

@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
-import { speakGermanWord } from "../utils/speechSynthesis";
 
 const PronunciationTrainerModal = ({ word, isOpen, onClose }) => {
     const [isRecording, setIsRecording] = useState(false);
@@ -92,14 +91,19 @@ const PronunciationTrainerModal = ({ word, isOpen, onClose }) => {
         }
     };
 
-    const handleSpeak = (text, speed = playbackSpeed) => {
-        speakGermanWord(text, {
-            rate: speed,
-            onStart: () => console.log('Speaking at rate', speed, ':', text),
-            onEnd: () => console.log('Finished speaking:', text)
-        }).catch(error => {
+    const handleSpeak = async (text, speed = playbackSpeed) => {
+        try {
+            // Dynamic import to avoid SSR issues
+            const { speakGermanWord } = await import("../utils/speechSynthesis");
+            await speakGermanWord(text, {
+                rate: speed,
+                onStart: () => console.log('Speaking at rate', speed, ':', text),
+                onEnd: () => console.log('Finished speaking:', text)
+            });
+        } catch (error) {
             console.error('Speech error in pronunciation trainer:', error);
-        });
+            toast.error('Speech synthesis failed. Please try again.');
+        }
     };
 
     const startRecording = async () => {

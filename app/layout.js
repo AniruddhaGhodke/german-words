@@ -31,6 +31,7 @@ export default async function RootLayout({ children }) {
                     href={metadata.icons.icon}
                     type="image/svg+xml"
                 />
+                <script src="https://js.puter.com/v2/" async></script>
             </head>
             <body className={inter.className}>
                 <Provider session={session}>
