@@ -15,28 +15,25 @@ const INSTRUCTIONS = [
 
 const Start = () => {
     return (
-        <div className="bg-[url('/svg1.svg')] bg-cover bg-center relative h-full min-h-screen pt-28">
-            <div className="flex flex-col max-w-screen-xl mx-auto p-4">
-                <div className="bg-primary-900 rounded-lg shadow-2xl p-10">
-                    <h1 className="text-3xl font-bold text-secondary-100 mb-4">
-                        Lets Start the Game!
+        <div className="bg-[url('/svg1.svg')] bg-cover bg-center relative h-full min-h-screen pt-20 sm:pt-24 lg:pt-28">
+            <div className="flex flex-col max-w-screen-xl mx-auto p-4 sm:p-6 lg:p-8">
+                <div className="bg-primary-900 rounded-lg shadow-2xl p-4 sm:p-6 lg:p-10">
+                    <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-secondary-100 mb-4">
+                        Let's Start the Game!
                     </h1>
-                    <p className="text-secondary-100 font-semibold mb-4">
+                    <p className="text-secondary-100 font-semibold mb-4 text-sm sm:text-base">
                         Instructions:{" "}
                     </p>
-                    <ul className="text-secondary-100 mb-4">
+                    <ul className="text-secondary-100 mb-6 text-sm sm:text-base space-y-1">
                         {INSTRUCTIONS.map((instruction, index) => (
-                            <li key={index}>{instruction}</li>
+                            <li key={index} className="leading-relaxed">{instruction}</li>
                         ))}
                     </ul>
                     <a
-                        whileHover={{ scale: 1.1 }}
-                        whileTap={{ scale: 0.9 }}
-                        transition={{ type: "spring", stiffness: 300 }}
-                        className="bg-teriary text-teriary-100 font-bold py-2 px-4 rounded shadow-lg hover:bg-teriary-200 hover:text-primary-900 transition-colors duration-300"
+                        className="inline-block bg-teriary text-teriary-100 font-bold py-3 px-6 rounded shadow-lg hover:bg-teriary-200 hover:text-primary-900 transition-colors duration-300 text-center min-h-[44px] text-sm sm:text-base"
                         href="/wordGame/start"
                     >
-                        Start
+                        🎯 Start Game
                     </a>
                 </div>
             </div>

@@ -2,8 +2,6 @@ import React, { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import toast from "react-hot-toast";
 import FlashcardModal from "./FlashcardModal";
-import SentenceBuilderModal from "./SentenceBuilderModal";
-import WordAssociationModal from "./WordAssociationModal";
 import PronunciationTrainerModal from "./PronunciationTrainerModal";
 import StoryGeneratorModal from "./StoryGeneratorModal";
 import { speakGermanWord } from "../utils/speechSynthesis";
@@ -27,8 +25,6 @@ export default function Component({
     const [selectedWords, setSelectedWords] = useState(new Set());
     const [isSelectMode, setIsSelectMode] = useState(false);
     const [flashcardWord, setFlashcardWord] = useState(null);
-    const [sentenceWord, setSentenceWord] = useState(null);
-    const [associationWord, setAssociationWord] = useState(null);
     const [pronunciationWord, setPronunciationWord] = useState(null);
     const [storyGeneratorOpen, setStoryGeneratorOpen] = useState(false);
     const [showGerman, setShowGerman] = useState(true);
@@ -220,14 +216,6 @@ export default function Component({
         setFlashcardWord(word);
     };
 
-    const openSentenceBuilder = (word) => {
-        setSentenceWord(word);
-    };
-
-    const openWordAssociation = (word) => {
-        setAssociationWord(word);
-    };
-
     const openPronunciationTrainer = (word) => {
         setPronunciationWord(word);
     };
@@ -255,7 +243,7 @@ export default function Component({
             initial={{ opacity: 0, y: 50 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="w-11/12 mx-auto mt-10"
+            className="w-full sm:w-11/12 mx-auto mt-6 sm:mt-10"
         >
             <motion.div
                 className="overflow-hidden rounded-xl shadow-xl bg-white"
@@ -278,7 +266,7 @@ export default function Component({
                         </div>
                     )}
                     
-                    <div className="flex flex-col gap-10 p-5 font-normal sm:flex-row">
+                    <div className="flex flex-col gap-4 sm:gap-6 lg:gap-10 p-3 sm:p-4 lg:p-5 font-normal sm:flex-row">
                         <div className="flex justify-start items-end sm:justify-end sm:basis-1/3">
                             <div className="w-full flex items-center gap-2">
                                 <label
@@ -293,8 +281,8 @@ export default function Component({
                                         id="searchWord"
                                         name="searchWord"
                                         value={searchTerm}
-                                        className="mt-1 block px-3 py-2 w-full text-primary bg-gray-100 border border-gray-300 rounded-md shadow-sm focus:bg-secondary-100 pr-8"
-                                        placeholder="Search German or English words..."
+                                        className="mt-1 block px-3 py-3 w-full text-primary bg-gray-100 border border-gray-300 rounded-md shadow-sm focus:bg-secondary-100 pr-8 min-h-[44px] text-sm sm:text-base"
+                                        placeholder="Search words..."
                                         onChange={(e) => handleSearchChange(e.target.value)}
                                     />
                                     {searchTerm && (
@@ -324,7 +312,7 @@ export default function Component({
                                     name="filterWords"
                                     value={filterType}
                                     onChange={(e) => handleFilterChange(e.target.value)}
-                                    className="mt-1 block w-full min-w-max pl-3 pr-10 py-2 text-base text-primary bg-gray-100 outline-1 border border-gray-300 outline-gray-300 focus:bg-secondary-100 rounded-md"
+                                    className="mt-1 block w-full min-w-max pl-3 pr-10 py-3 text-sm sm:text-base text-primary bg-gray-100 outline-1 border border-gray-300 outline-gray-300 focus:bg-secondary-100 rounded-md min-h-[44px]"
                                 >
                                     <option>All</option>
                                     <option>Noun</option>
@@ -361,42 +349,42 @@ export default function Component({
                     </div>
                     
                     {/* Sort Options Bar */}
-                    <div className="bg-gray-50 px-5 py-3 border-t border-gray-200">
-                        <div className="flex flex-wrap items-center gap-2 text-sm">
-                            <span className="font-medium text-gray-700">Sort by:</span>
+                    <div className="bg-gray-50 px-3 sm:px-5 py-3 border-t border-gray-200">
+                        <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm">
+                            <span className="font-medium text-gray-700 w-full sm:w-auto mb-2 sm:mb-0">Sort by:</span>
                             <button 
                                 onClick={() => onSort('german-asc')}
-                                className="px-2 py-1 bg-white border border-gray-300 rounded hover:bg-gray-50 text-gray-700"
+                                className="px-3 py-2 bg-white border border-gray-300 rounded hover:bg-gray-50 text-gray-700 min-h-[40px] text-xs sm:text-sm"
                             >
-                                German A→Z
+                                🇩🇪 A→Z
                             </button>
                             <button 
                                 onClick={() => onSort('english-asc')}
-                                className="px-2 py-1 bg-white border border-gray-300 rounded hover:bg-gray-50 text-gray-700"
+                                className="px-3 py-2 bg-white border border-gray-300 rounded hover:bg-gray-50 text-gray-700 min-h-[40px] text-xs sm:text-sm"
                             >
-                                English A→Z
+                                🇺🇸 A→Z
                             </button>
                             <button 
                                 onClick={() => onSort('date-newest')}
-                                className="px-2 py-1 bg-white border border-gray-300 rounded hover:bg-gray-50 text-gray-700"
+                                className="px-3 py-2 bg-white border border-gray-300 rounded hover:bg-gray-50 text-gray-700 min-h-[40px] text-xs sm:text-sm"
                             >
-                                Newest First
+                                📅 Newest
                             </button>
                             <button 
                                 onClick={() => onSort('type')}
-                                className="px-2 py-1 bg-white border border-gray-300 rounded hover:bg-gray-50 text-gray-700"
+                                className="px-3 py-2 bg-white border border-gray-300 rounded hover:bg-gray-50 text-gray-700 min-h-[40px] text-xs sm:text-sm"
                             >
-                                By Type
+                                📝 Type
                             </button>
                         </div>
                     </div>
                     
                     {/* Bulk Actions Bar */}
-                    <div className="bg-blue-50 px-5 py-3 border-t border-gray-200 flex items-center justify-between">
-                        <div className="flex items-center gap-3">
+                    <div className="bg-blue-50 px-3 sm:px-5 py-3 border-t border-gray-200 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+                        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                             <button
                                 onClick={toggleSelectMode}
-                                className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                                className={`px-3 py-2 rounded text-xs sm:text-sm font-medium transition-colors min-h-[40px] ${
                                     isSelectMode 
                                         ? 'bg-blue-600 text-white' 
                                         : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
@@ -406,8 +394,8 @@ export default function Component({
                             </button>
                             
                             {/* Column visibility toggles */}
-                            <div className="flex items-center gap-2 ml-4">
-                                <span className="text-sm text-gray-600">Show:</span>
+                            <div className="flex items-center gap-2 ml-0 sm:ml-4">
+                                <span className="text-xs sm:text-sm text-gray-600">Show:</span>
                                 <button
                                     onClick={() => {
                                         if (showGerman && !showEnglish) {
@@ -416,13 +404,13 @@ export default function Component({
                                         }
                                         setShowGerman(!showGerman);
                                     }}
-                                    className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
+                                    className={`px-2 py-2 rounded text-xs font-medium transition-colors min-h-[36px] ${
                                         showGerman 
                                             ? 'bg-green-600 text-white' 
                                             : 'bg-gray-300 text-gray-600 hover:bg-gray-400'
                                     }`}
                                 >
-                                    🇩🇪 German
+                                    🇩🇪 <span className="hidden sm:inline">German</span>
                                 </button>
                                 <button
                                     onClick={() => {
@@ -432,13 +420,13 @@ export default function Component({
                                         }
                                         setShowEnglish(!showEnglish);
                                     }}
-                                    className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
+                                    className={`px-2 py-2 rounded text-xs font-medium transition-colors min-h-[36px] ${
                                         showEnglish 
                                             ? 'bg-green-600 text-white' 
                                             : 'bg-gray-300 text-gray-600 hover:bg-gray-400'
                                     }`}
                                 >
-                                    🇺🇸 English
+                                    🇺🇸 <span className="hidden sm:inline">English</span>
                                 </button>
                                 {(!showGerman || !showEnglish) && (
                                     <button
@@ -446,7 +434,7 @@ export default function Component({
                                             setShowGerman(true);
                                             setShowEnglish(true);
                                         }}
-                                        className="px-2 py-1 rounded text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                                        className="px-2 py-2 rounded text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors min-h-[36px]"
                                     >
                                         Show All
                                     </button>
@@ -474,21 +462,21 @@ export default function Component({
                             )}
                         </div>
                         
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                             {pagination.total > 0 && (
-                                <div className="flex items-center gap-2">
-                                    <span className="text-sm text-gray-600">Export:</span>
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <span className="text-xs sm:text-sm text-gray-600">Export:</span>
                                     <button
                                         onClick={exportToCSV}
-                                        className="px-2 py-1 text-xs bg-green-100 text-green-700 rounded hover:bg-green-200 transition-colors"
+                                        className="px-3 py-2 text-xs bg-green-100 text-green-700 rounded hover:bg-green-200 transition-colors min-h-[36px]"
                                     >
-                                        CSV
+                                        📊 CSV
                                     </button>
                                     <button
                                         onClick={exportToJSON}
-                                        className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
+                                        className="px-3 py-2 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors min-h-[36px]"
                                     >
-                                        JSON
+                                        📄 JSON
                                     </button>
                                 </div>
                             )}
@@ -497,266 +485,227 @@ export default function Component({
                                 <>
                                     <button
                                         onClick={openStoryGenerator}
-                                        className="px-3 py-1 bg-purple-600 text-white rounded text-sm font-medium hover:bg-purple-700 transition-colors flex items-center gap-1"
+                                        className="px-3 py-2 bg-purple-600 text-white rounded text-xs font-medium hover:bg-purple-700 transition-colors flex items-center gap-1 min-h-[36px] whitespace-nowrap"
                                         title="Generate story with selected words"
                                     >
-                                        📖 Generate Story ({selectedWords.size})
+                                        📖 <span className="hidden sm:inline">Story</span> ({selectedWords.size})
                                     </button>
                                     <button
                                         onClick={bulkDelete}
                                         disabled={loading}
-                                        className="px-3 py-1 bg-red-600 text-white rounded text-sm font-medium hover:bg-red-700 disabled:opacity-50"
+                                        className="px-3 py-2 bg-red-600 text-white rounded text-xs font-medium hover:bg-red-700 disabled:opacity-50 min-h-[36px] whitespace-nowrap"
                                     >
-                                        {loading ? 'Deleting...' : `Delete ${selectedWords.size} Selected`}
+                                        {loading ? 'Deleting...' : `🗑️ Delete ${selectedWords.size}`}
                                     </button>
                                 </>
                             )}
                         </div>
                     </div>
                 </div>
-                <table className="w-full table-fixed text-sm sm:text-base overflow-hidden">
-                    <thead>
-                        <tr className="bg-primary text-gray-300">
-                            {isSelectMode && (
-                                <th className="w-12 py-3 px-4">
+                {/* Mobile Card Layout */}
+                <div className="sm:hidden space-y-4 p-4">
+                    {isSelectMode && (
+                        <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg mb-4">
+                            <input
+                                type="checkbox"
+                                checked={records.length > 0 && records.every(word => selectedWords.has(word.uuid))}
+                                onChange={(e) => e.target.checked ? selectAllVisible() : deselectAll()}
+                                className="w-5 h-5"
+                            />
+                            <span className="text-sm text-gray-700">Select all visible words</span>
+                        </div>
+                    )}
+                    
+                    {records.map((d, i) => (
+                        <motion.div
+                            key={d.uuid}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.3, delay: i * 0.05 }}
+                            className={`p-4 rounded-xl border-2 transition-all duration-200 ${
+                                isSelectMode && selectedWords.has(d.uuid)
+                                    ? 'border-blue-300 bg-blue-50'
+                                    : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-md'
+                            }`}
+                        >
+                            <div className="flex items-start justify-between mb-3">
+                                <div className="flex-1">
+                                    {showGerman && (
+                                        <h3 className="text-lg font-bold text-gray-800 mb-1">
+                                            {d.german}
+                                        </h3>
+                                    )}
+                                    {showEnglish && (
+                                        <p className="text-gray-600 mb-2">
+                                            {d.english}
+                                        </p>
+                                    )}
+                                    {d.type && (
+                                        <span className="inline-block px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">
+                                            {d.type}
+                                        </span>
+                                    )}
+                                </div>
+                                
+                                {isSelectMode && (
                                     <input
                                         type="checkbox"
-                                        checked={records.length > 0 && records.every(word => selectedWords.has(word.uuid))}
-                                        onChange={(e) => e.target.checked ? selectAllVisible() : deselectAll()}
-                                        className="w-4 h-4"
+                                        checked={selectedWords.has(d.uuid)}
+                                        onChange={() => toggleSelectWord(d.uuid)}
+                                        className="w-5 h-5 mt-1"
                                     />
-                                </th>
-                            )}
-                            {HEADERS.map((header, index) => {
-                                // Skip German word column if hidden
-                                if (index === 0 && !showGerman) return null;
-                                // Skip English word column if hidden  
-                                if (index === 1 && !showEnglish) return null;
-                                
-                                return (
-                                    <motion.th
-                                        key={index}
-                                        initial={{ opacity: 0 }}
-                                        animate={{ opacity: 1 }}
-                                        transition={{ delay: index * 0.1 }}
-                                        className={`${
-                                            index === 2
-                                                ? "hidden sm:table-cell"
-                                                : ""
-                                        } capitalize py-3 px-4`}
+                                )}
+                            </div>
+                            
+                            {!isSelectMode && (
+                                <div className="flex items-center gap-3 pt-3 border-t border-gray-100">
+                                    <motion.button
+                                        whileHover={{ scale: 1.05 }}
+                                        whileTap={{ scale: 0.95 }}
+                                        className="flex-1 bg-sky-50 hover:bg-sky-100 text-sky-700 hover:text-sky-800 p-3 rounded-xl border border-sky-200 hover:border-sky-300 transition-all duration-200 shadow-sm hover:shadow-md min-h-[48px] flex items-center justify-center gap-2"
+                                        onClick={() => openPronunciationTrainer(d)}
+                                        aria-label="Pronunciation Trainer"
                                     >
-                                        {header}
-                                    </motion.th>
-                                );
-                            })}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {records.map((d, i) => (
-                            <motion.tr
-                                key={d.uuid}
-                                initial={{ opacity: 0, x: -50 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                exit={{ opacity: 0, x: 50 }}
-                                transition={{
-                                    duration: 0.3,
-                                    delay: i * 0.05,
-                                }}
-                                className={`text-center transition-colors duration-200 ${
-                                    isSelectMode && selectedWords.has(d.uuid)
-                                        ? 'bg-blue-100 hover:bg-blue-200'
-                                        : 'bg-gray-100 hover:bg-teriary-100'
-                                }`}
-                            >
+                                        <span className="text-xl">🎯</span>
+                                        <span className="text-sm font-medium">Practice</span>
+                                    </motion.button>
+                                    <motion.button
+                                        whileHover={{ scale: 1.05 }}
+                                        whileTap={{ scale: 0.95 }}
+                                        className="flex-1 bg-purple-50 hover:bg-purple-100 text-purple-700 hover:text-purple-800 p-3 rounded-xl border border-purple-200 hover:border-purple-300 transition-all duration-200 shadow-sm hover:shadow-md min-h-[48px] flex items-center justify-center gap-2"
+                                        onClick={() => openFlashcard(d)}
+                                        aria-label="Flashcard Practice"
+                                    >
+                                        <span className="text-xl">🃏</span>
+                                        <span className="text-sm font-medium">Flashcard</span>
+                                    </motion.button>
+                                </div>
+                            )}
+                        </motion.div>
+                    ))}
+                </div>
+
+                {/* Desktop Table Layout */}
+                <div className="hidden sm:block overflow-x-auto">
+                    <table className="w-full table-fixed text-sm lg:text-base overflow-hidden min-w-[600px]">
+                        <thead>
+                            <tr className="bg-primary text-gray-300">
                                 {isSelectMode && (
-                                    <td className="py-3 px-4">
+                                    <th className="w-12 py-3 px-4">
                                         <input
                                             type="checkbox"
-                                            checked={selectedWords.has(d.uuid)}
-                                            onChange={() => toggleSelectWord(d.uuid)}
+                                            checked={records.length > 0 && records.every(word => selectedWords.has(word.uuid))}
+                                            onChange={(e) => e.target.checked ? selectAllVisible() : deselectAll()}
                                             className="w-4 h-4"
                                         />
-                                    </td>
+                                    </th>
                                 )}
-                                {showGerman && (
-                                    <td className="py-3 px-4 font-medium">
-                                        {d.german}
-                                    </td>
-                                )}
-                                {showEnglish && (
-                                    <td className="py-3 px-4">
-                                        {d.english}
-                                    </td>
-                                )}
-                                <td className="hidden sm:table-cell py-3 px-4">
-                                    {d.type || "Any"}
-                                </td>
-                                <td className="py-3 px-4">
-                                    {!isSelectMode && (
-                                        <div className="flex items-center justify-center gap-2 flex-wrap">
-                                            <motion.button
-                                                whileHover={{ scale: 1.15, y: -2 }}
-                                                whileTap={{ scale: 0.95 }}
-                                                className="bg-sky-50 hover:bg-sky-100 text-sky-700 hover:text-sky-800 p-3 rounded-xl border border-sky-200 hover:border-sky-300 transition-all duration-200 shadow-sm hover:shadow-md"
-                                                onClick={() => openPronunciationTrainer(d)}
-                                                aria-label="Pronunciation Trainer"
-                                                title="Advanced pronunciation practice"
-                                            >
-                                                <span className="text-lg">🎯</span>
-                                            </motion.button>
-                                            <motion.button
-                                                whileHover={{ scale: 1.15, y: -2 }}
-                                                whileTap={{ scale: 0.95 }}
-                                                className="bg-purple-50 hover:bg-purple-100 text-purple-700 hover:text-purple-800 p-3 rounded-xl border border-purple-200 hover:border-purple-300 transition-all duration-200 shadow-sm hover:shadow-md"
-                                                onClick={() => openFlashcard(d)}
-                                                aria-label="Flashcard Practice"
-                                                title="Flashcard practice"
-                                            >
-                                                <span className="text-lg">🃏</span>
-                                            </motion.button>
-                                            <motion.button
-                                                whileHover={{ scale: 1.15, y: -2 }}
-                                                whileTap={{ scale: 0.95 }}
-                                                className="bg-green-50 hover:bg-green-100 text-green-700 hover:text-green-800 p-3 rounded-xl border border-green-200 hover:border-green-300 transition-all duration-200 shadow-sm hover:shadow-md"
-                                                onClick={() => openSentenceBuilder(d)}
-                                                aria-label="Sentence Practice"
-                                                title="Sentence practice"
-                                            >
-                                                <span className="text-lg">📝</span>
-                                            </motion.button>
-                                            <motion.button
-                                                whileHover={{ scale: 1.15, y: -2 }}
-                                                whileTap={{ scale: 0.95 }}
-                                                className="bg-orange-50 hover:bg-orange-100 text-orange-700 hover:text-orange-800 p-3 rounded-xl border border-orange-200 hover:border-orange-300 transition-all duration-200 shadow-sm hover:shadow-md"
-                                                onClick={() => openWordAssociation(d)}
-                                                aria-label="Word Association Game"
-                                                title="Word association game"
-                                            >
-                                                <span className="text-lg">🧩</span>
-                                            </motion.button>
-                                            <motion.button
-                                                whileHover={{ scale: 1.15, y: -2 }}
-                                                whileTap={{ scale: 0.95 }}
-                                                className="bg-red-50 hover:bg-red-100 text-red-700 hover:text-red-800 p-3 rounded-xl border border-red-200 hover:border-red-300 transition-all duration-200 shadow-sm hover:shadow-md"
-                                                onClick={() => handleOpenModal(d.uuid)}
-                                                aria-label="Delete"
-                                                title="Delete word"
-                                            >
-                                                <img
-                                                    src="/delete.svg"
-                                                    alt="Delete Icon"
-                                                    className="h-5 w-5"
-                                                />
-                                            </motion.button>
-                                        </div>
-                                    )}
-                                    <div
-                                        ref={(el) =>
-                                            (modalRefs.current[d.uuid] = el)
-                                        }
-                                        className="fixed inset-0 flex items-center justify-center z-50 hidden"
-                                    >
-                                        <motion.div
-                                            initial={{
-                                                opacity: 0,
-                                                scale: 0.8,
-                                            }}
-                                            animate={{
-                                                opacity: 1,
-                                                scale: 1,
-                                            }}
-                                            exit={{
-                                                opacity: 0,
-                                                scale: 0.8,
-                                            }}
-                                            className="bg-white p-6 rounded-lg shadow-xl z-10 max-w-sm w-full"
+                                {HEADERS.map((header, index) => {
+                                    // Skip German word column if hidden
+                                    if (index === 0 && !showGerman) return null;
+                                    // Skip English word column if hidden  
+                                    if (index === 1 && !showEnglish) return null;
+                                    
+                                    return (
+                                        <motion.th
+                                            key={index}
+                                            initial={{ opacity: 0 }}
+                                            animate={{ opacity: 1 }}
+                                            transition={{ delay: index * 0.1 }}
+                                            className={`${
+                                                index === 2
+                                                    ? "hidden lg:table-cell"
+                                                    : ""
+                                            } capitalize py-3 px-2 sm:px-4`}
                                         >
-                                            <h3 className="text-lg font-semibold mb-4">
-                                                Confirm Deletion
-                                            </h3>
-                                            <p className="mb-6">
-                                                Are you sure you want to delete{" "}
-                                                <span className="font-bold">
-                                                    {d.german}
-                                                </span>
-                                                ?
-                                            </p>
-                                            <div className="flex justify-end space-x-4">
+                                            {header}
+                                        </motion.th>
+                                    );
+                                })}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {records.map((d, i) => (
+                                <motion.tr
+                                    key={d.uuid}
+                                    initial={{ opacity: 0, x: -50 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    exit={{ opacity: 0, x: 50 }}
+                                    transition={{
+                                        duration: 0.3,
+                                        delay: i * 0.05,
+                                    }}
+                                    className={`text-center transition-colors duration-200 ${
+                                        isSelectMode && selectedWords.has(d.uuid)
+                                            ? 'bg-blue-100 hover:bg-blue-200'
+                                            : 'bg-gray-100 hover:bg-teriary-100'
+                                    }`}
+                                >
+                                    {isSelectMode && (
+                                        <td className="py-3 px-2 sm:px-4">
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedWords.has(d.uuid)}
+                                                onChange={() => toggleSelectWord(d.uuid)}
+                                                className="w-4 h-4"
+                                            />
+                                        </td>
+                                    )}
+                                    {showGerman && (
+                                        <td className="py-3 px-2 sm:px-4 font-medium text-sm">
+                                            {d.german}
+                                        </td>
+                                    )}
+                                    {showEnglish && (
+                                        <td className="py-3 px-2 sm:px-4 text-sm">
+                                            {d.english}
+                                        </td>
+                                    )}
+                                    <td className="hidden lg:table-cell py-3 px-2 sm:px-4 text-sm">
+                                        {d.type || "Any"}
+                                    </td>
+                                    <td className="py-3 px-1 sm:px-4">
+                                        {!isSelectMode && (
+                                            <div className="flex items-center justify-center gap-2 sm:gap-3">
                                                 <motion.button
-                                                    whileHover={{
-                                                        scale: 1.05,
-                                                    }}
-                                                    whileTap={{
-                                                        scale: 0.95,
-                                                    }}
-                                                    className="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 transition-colors duration-200"
-                                                    onClick={() =>
-                                                        handleCloseModal(d.uuid)
-                                                    }
+                                                    whileHover={{ scale: 1.1, y: -1 }}
+                                                    whileTap={{ scale: 0.95 }}
+                                                    className="bg-sky-50 hover:bg-sky-100 text-sky-700 hover:text-sky-800 p-3 rounded-lg sm:rounded-xl border border-sky-200 hover:border-sky-300 transition-all duration-200 shadow-sm hover:shadow-md min-h-[44px] min-w-[44px] flex items-center justify-center"
+                                                    onClick={() => openPronunciationTrainer(d)}
+                                                    aria-label="Pronunciation Trainer"
+                                                    title="Advanced pronunciation practice"
                                                 >
-                                                    Cancel
+                                                    <span className="text-lg sm:text-xl">🎯</span>
                                                 </motion.button>
                                                 <motion.button
-                                                    whileHover={{
-                                                        scale: 1.05,
-                                                    }}
-                                                    whileTap={{
-                                                        scale: 0.95,
-                                                    }}
-                                                    className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors duration-200 flex items-center"
-                                                    onClick={() =>
-                                                        handleDelete(d.uuid)
-                                                    }
-                                                    disabled={loading}
+                                                    whileHover={{ scale: 1.1, y: -1 }}
+                                                    whileTap={{ scale: 0.95 }}
+                                                    className="bg-purple-50 hover:bg-purple-100 text-purple-700 hover:text-purple-800 p-3 rounded-lg sm:rounded-xl border border-purple-200 hover:border-purple-300 transition-all duration-200 shadow-sm hover:shadow-md min-h-[44px] min-w-[44px] flex items-center justify-center"
+                                                    onClick={() => openFlashcard(d)}
+                                                    aria-label="Flashcard Practice"
+                                                    title="Flashcard practice"
                                                 >
-                                                    {loading && (
-                                                        <svg
-                                                            className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
-                                                            xmlns="http://www.w3.org/2000/svg"
-                                                            fill="none"
-                                                            viewBox="0 0 24 24"
-                                                        >
-                                                            <circle
-                                                                className="opacity-25"
-                                                                cx="12"
-                                                                cy="12"
-                                                                r="10"
-                                                                stroke="currentColor"
-                                                                strokeWidth="4"
-                                                            ></circle>
-                                                            <path
-                                                                className="opacity-75"
-                                                                fill="currentColor"
-                                                                d="M4 12a8 8 0 018-8V4a10 10 0 00-10 10h2z"
-                                                            ></path>
-                                                        </svg>
-                                                    )}
-                                                    Confirm
+                                                    <span className="text-lg sm:text-xl">🃏</span>
                                                 </motion.button>
                                             </div>
-                                        </motion.div>
-                                        <div
-                                            className="fixed inset-0 bg-black opacity-50"
-                                            onClick={() =>
-                                                handleCloseModal(d.uuid)
-                                            }
-                                        ></div>
-                                    </div>
-                                </td>
-                            </motion.tr>
-                        ))}
-                    </tbody>
-                </table>
+                                        )}
+                                    </td>
+                                </motion.tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
             </motion.div>
             <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.5 }}
-                className="flex justify-center space-x-4 my-10 items-center"
+                className="flex justify-center space-x-2 sm:space-x-4 my-6 sm:my-10 items-center flex-wrap gap-2"
             >
                 <PageButton
                     onClick={() => onPageChange(1)}
                     disabled={!pagination.hasPrev}
+                    className="hidden sm:inline-flex"
                 >
                     First
                 </PageButton>
@@ -764,20 +713,23 @@ export default function Component({
                     onClick={() => onPageChange(pagination.page - 1)}
                     disabled={!pagination.hasPrev}
                 >
-                    Prev
+                    <span className="sm:hidden">‹</span>
+                    <span className="hidden sm:inline">Prev</span>
                 </PageButton>
-                <span className="text-primary font-bold">
+                <span className="text-primary font-bold text-sm sm:text-base px-2 py-1 bg-gray-100 rounded">
                     {pagination.page} / {pagination.totalPages}
                 </span>
                 <PageButton
                     onClick={() => onPageChange(pagination.page + 1)}
                     disabled={!pagination.hasNext}
                 >
-                    Next
+                    <span className="sm:hidden">›</span>
+                    <span className="hidden sm:inline">Next</span>
                 </PageButton>
                 <PageButton
                     onClick={() => onPageChange(pagination.totalPages)}
                     disabled={!pagination.hasNext}
+                    className="hidden sm:inline-flex"
                 >
                     Last
                 </PageButton>
@@ -788,19 +740,6 @@ export default function Component({
                 word={flashcardWord}
                 isOpen={!!flashcardWord}
                 onClose={() => setFlashcardWord(null)}
-                onSpeak={handleSpeak}
-            />
-            <SentenceBuilderModal
-                word={sentenceWord}
-                isOpen={!!sentenceWord}
-                onClose={() => setSentenceWord(null)}
-                onSpeak={handleSpeak}
-            />
-            <WordAssociationModal
-                word={associationWord}
-                allWords={data}
-                isOpen={!!associationWord}
-                onClose={() => setAssociationWord(null)}
                 onSpeak={handleSpeak}
             />
             <PronunciationTrainerModal
@@ -818,16 +757,16 @@ export default function Component({
     );
 }
 
-function PageButton({ children, onClick, disabled }) {
+function PageButton({ children, onClick, disabled, className = "" }) {
     return (
         <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            className={`px-4 py-2 rounded-full ${
+            className={`px-3 sm:px-4 py-2 rounded-full text-sm sm:text-base min-h-[40px] ${
                 disabled
                     ? "bg-gray-300 text-gray-400 cursor-not-allowed"
-                    : "bg-primary text-gray-200"
-            }`}
+                    : "bg-primary text-gray-200 hover:bg-primary/90"
+            } ${className}`}
             onClick={onClick}
             disabled={disabled}
         >

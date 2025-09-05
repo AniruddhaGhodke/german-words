@@ -147,12 +147,12 @@ const WordForm = ({ onWordAdd, onSearch, onSort }) => {
 
     return (
         <>
-            <div className="py-5 px-5 shadow-lg mx-auto w-11/12 bg-gray-100 rounded-lg flex flex-col sm:flex-row">
+            <div className="py-3 sm:py-5 px-3 sm:px-5 shadow-lg mx-auto w-full sm:w-11/12 bg-gray-100 rounded-lg flex flex-col sm:flex-row">
                 <button
                     onClick={toggleModal}
-                    className="sm:hidden mb-4 p-2 border border-sky-800 hover:bg-sky-800 text-gray-800 hover:text-white rounded-md shadow-sm"
+                    className="sm:hidden mb-4 p-3 border border-sky-800 hover:bg-sky-800 text-gray-800 hover:text-white rounded-md shadow-sm font-medium min-h-[44px]"
                 >
-                    Add Word
+                    + Add New Word
                 </button>
 
                 {isModalOpen && (
@@ -173,7 +173,7 @@ const WordForm = ({ onWordAdd, onSearch, onSort }) => {
                     isLoading={isLoading}
                     onSearch={onSearch}
                     setIsLoading={setIsLoading}
-                    className="hidden sm:flex gap-10 items-end flex-1"
+                    className="hidden sm:flex gap-6 lg:gap-10 items-end flex-1"
                 />
             </div>
         </>
@@ -343,15 +343,15 @@ const FormTemplate = React.forwardRef(
                 <div className="flex gap-2 flex-wrap">
                     <motion.button
                         whileHover={{
-                            scale: 1.1,
-                            transition: { delay: 0.2, duration: 0.2 },
+                            scale: 1.05,
+                            transition: { delay: 0.1, duration: 0.2 },
                         }}
                         whileTap={{ scale: 0.95 }}
                         type="submit"
                         disabled={isLoading || !isFormValid}
                         className={`${
                             props.isModal ? "w-full" : "flex-1"
-                        } flex justify-center py-2 px-4 rounded-md shadow-sm text-sm font-medium transition-colors ${
+                        } flex justify-center py-3 px-4 rounded-md shadow-sm text-sm font-medium transition-colors min-h-[44px] ${
                             isLoading || !isFormValid 
                                 ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                                 : 'bg-gray-200 text-primary hover:bg-tertiary hover:text-gray-100'
@@ -366,8 +366,8 @@ const FormTemplate = React.forwardRef(
                     </motion.button>
                     <motion.button
                         whileHover={{
-                            scale: 1.1,
-                            transition: { delay: 0.2, duration: 0.2 },
+                            scale: 1.05,
+                            transition: { delay: 0.1, duration: 0.2 },
                         }}
                         whileTap={{ scale: 0.95 }}
                         type="button"
@@ -375,7 +375,7 @@ const FormTemplate = React.forwardRef(
                         disabled={isLoading}
                         className={`${
                             props.isModal ? "w-full" : "flex-1"
-                        } flex justify-center py-2 px-4 rounded-md shadow-sm text-sm font-medium bg-yellow-200 text-primary hover:bg-yellow-300 transition-colors`}
+                        } flex justify-center py-3 px-4 rounded-md shadow-sm text-sm font-medium bg-yellow-200 text-primary hover:bg-yellow-300 transition-colors min-h-[44px]`}
                         title="Translate (Ctrl+T)"
                     >
                         {isLoading ? (
@@ -386,16 +386,16 @@ const FormTemplate = React.forwardRef(
                     </motion.button>
                     <motion.button
                         whileHover={{
-                            scale: 1.1,
-                            transition: { delay: 0.2, duration: 0.2 },
+                            scale: 1.05,
+                            transition: { delay: 0.1, duration: 0.2 },
                         }}
                         whileTap={{ scale: 0.95 }}
                         type="button"
                         onClick={handleClearForm}
                         disabled={isLoading}
                         className={`${
-                            props.isModal ? "w-full" : "w-auto"
-                        } flex justify-center py-2 px-4 rounded-md shadow-sm text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors`}
+                            props.isModal ? "w-full" : "w-auto lg:flex-1"
+                        } flex justify-center py-3 px-4 rounded-md shadow-sm text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors min-h-[44px]`}
                         title="Clear form (Esc)"
                     >
                         Clear
@@ -405,7 +405,7 @@ const FormTemplate = React.forwardRef(
                     <button
                         type="button"
                         onClick={closeModal}
-                        className="mt-4 w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-200 transition-colors"
+                        className="mt-4 w-full flex justify-center py-3 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-200 transition-colors min-h-[44px]"
                     >
                         Cancel
                     </button>
@@ -463,8 +463,8 @@ const Modal = ({ isOpen, onClose, children }) => {
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center z-50">
-            <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full mx-4">
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center z-50 p-4">
+            <div className="bg-white p-4 sm:p-6 rounded-lg shadow-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
                 {children}
             </div>
         </div>

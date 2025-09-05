@@ -63,13 +63,13 @@ const FlashcardModal = ({ word, isOpen, onClose, onSpeak }) => {
                     initial={{ scale: 0.8, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
                     exit={{ scale: 0.8, opacity: 0 }}
-                    className="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full mx-4"
+                    className="bg-white rounded-xl shadow-2xl p-4 sm:p-6 lg:p-8 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto"
                 >
-                    <div className="flex justify-between items-center mb-6">
-                        <h2 className="text-2xl font-bold text-gray-800">Flashcard Practice</h2>
+                    <div className="flex justify-between items-center mb-4 sm:mb-6">
+                        <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-800">Flashcard Practice</h2>
                         <button
                             onClick={onClose}
-                            className="text-gray-500 hover:text-gray-700 text-2xl"
+                            className="text-gray-500 hover:text-gray-700 text-xl sm:text-2xl min-h-[44px] min-w-[44px] flex items-center justify-center"
                         >
                             ×
                         </button>
@@ -79,7 +79,7 @@ const FlashcardModal = ({ word, isOpen, onClose, onSpeak }) => {
                         <>
                             {/* Flashcard */}
                             <div
-                                className="relative h-48 mb-6 cursor-pointer"
+                                className="relative h-36 sm:h-44 lg:h-48 mb-4 sm:mb-6 cursor-pointer"
                                 onClick={flipCard}
                                 style={{ perspective: '1000px' }}
                             >
@@ -100,15 +100,15 @@ const FlashcardModal = ({ word, isOpen, onClose, onSpeak }) => {
                                             WebkitBackfaceVisibility: 'hidden'
                                         }}
                                     >
-                                        <div className="text-center text-white">
-                                            <p className="text-3xl font-bold mb-2">{word.german}</p>
-                                            <p className="text-sm opacity-80">({word.type || 'Any'})</p>
+                                        <div className="text-center text-white px-2">
+                                            <p className="text-xl sm:text-2xl lg:text-3xl font-bold mb-2">{word.german}</p>
+                                            <p className="text-xs sm:text-sm opacity-80">({word.type || 'Any'})</p>
                                             <button
                                                 onClick={(e) => {
                                                     e.stopPropagation();
                                                     onSpeak(word.german);
                                                 }}
-                                                className="mt-4 bg-white bg-opacity-20 hover:bg-opacity-30 rounded-full p-2 transition-colors"
+                                                className="mt-3 sm:mt-4 bg-white bg-opacity-20 hover:bg-opacity-30 rounded-full p-2 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
                                             >
                                                 🔊
                                             </button>
@@ -124,9 +124,9 @@ const FlashcardModal = ({ word, isOpen, onClose, onSpeak }) => {
                                             transform: 'rotateY(180deg)'
                                         }}
                                     >
-                                        <div className="text-center text-white">
-                                            <p className="text-3xl font-bold">{word.english}</p>
-                                            <p className="text-lg mt-2 opacity-90">English Translation</p>
+                                        <div className="text-center text-white px-2">
+                                            <p className="text-xl sm:text-2xl lg:text-3xl font-bold">{word.english}</p>
+                                            <p className="text-sm sm:text-base lg:text-lg mt-2 opacity-90">English Translation</p>
                                         </div>
                                     </div>
                                 </motion.div>

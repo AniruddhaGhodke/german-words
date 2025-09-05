@@ -1,6 +1,8 @@
 import { Inter } from "next/font/google";
 import "./globals.css";
 import Provider from "@/components/Provider";
+import { getServerSession } from "next-auth";
+import { authOptions } from "./api/auth/[...nextauth]/route";
 
 import { Toaster } from "react-hot-toast";
 import Header from "@/components/Header";
@@ -17,6 +19,8 @@ export const metadata = {
 };
 
 export default async function RootLayout({ children }) {
+    const session = await getServerSession(authOptions);
+    
     return (
         <html lang="en">
             <head>
@@ -29,7 +33,7 @@ export default async function RootLayout({ children }) {
                 />
             </head>
             <body className={inter.className}>
-                <Provider>
+                <Provider session={session}>
                     <Header />
                     <Breadcrumb />
                     {children}
