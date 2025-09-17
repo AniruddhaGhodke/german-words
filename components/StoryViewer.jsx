@@ -79,7 +79,6 @@ const StoryViewer = ({ story, onClose }) => {
         if (!story) return;
 
         await stopAudio();
-        stopWordTracking();
 
         const currentStory =
             currentLanguage === "german"
