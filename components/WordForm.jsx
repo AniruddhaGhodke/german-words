@@ -1,100 +1,92 @@
 "use client";
 
-import { addWord } from "@/server_actions/words";
-import React, { useEffect, useRef, useState, useMemo } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import { motion } from "framer-motion";
 import { FaSpinner } from "react-icons/fa";
 import dynamic from "next/dynamic";
 import toast from "react-hot-toast";
-import { Translate } from "@/server_actions/translate";
+import { useAppSelector, useAppDispatch } from "@/store/hooks";
+import { 
+  useGetWordsQuery, 
+  useAddWordMutation, 
+  useTranslateWordMutation 
+} from "@/store/api/wordsApi";
+import {
+  selectPagination,
+  selectFilters,
+  setPagination,
+  setCurrentPage,
+  setSearch,
+  setTypeFilter,
+  setSort
+} from "@/store/slices/wordsSlice";
 
 // Lazy load the Table and Skeleton components
 const Table = dynamic(() => import("./Table"));
 const TableSkeleton = dynamic(() => import("./TableSkeleton"));
 
 const Accordion = ({ rate }) => {
-    const [data, setData] = useState([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [pagination, setPagination] = useState({
-        page: 1,
-        limit: 10,
-        total: 0,
-        totalPages: 0,
-        hasNext: false,
-        hasPrev: false
+    const dispatch = useAppDispatch();
+    const pagination = useAppSelector(selectPagination);
+    const filters = useAppSelector(selectFilters);
+
+    // RTK Query for data fetching
+    const {
+        data: wordsResponse,
+        error,
+        isLoading,
+        isFetching,
+        refetch
+    } = useGetWordsQuery({
+        page: pagination.page,
+        limit: pagination.limit,
+        search: filters.search,
+        type: filters.type,
+        sort: filters.sort
     });
-    const [filters, setFilters] = useState({
-        search: '',
-        type: '',
-        sort: ''
-    });
 
-    // Fetch paginated data
-    async function fetchData(page = 1, newFilters = filters) {
-        setIsLoading(true);
-        
-        const searchParams = new URLSearchParams({
-            page: page.toString(),
-            limit: pagination.limit.toString(),
-            ...(newFilters.search && { search: newFilters.search }),
-            ...(newFilters.type && { type: newFilters.type }),
-            ...(newFilters.sort && { sort: newFilters.sort })
-        });
-        
-        try {
-            const res = await fetch(`/api/words?${searchParams}`).then((res) => res.json());
-            
-            if (res.success) {
-                setData(res.data || []);
-                setPagination(res.pagination || {
-                    page: 1,
-                    limit: 10,
-                    total: 0,
-                    totalPages: 0,
-                    hasNext: false,
-                    hasPrev: false
-                });
-            } else {
-                toast.error("Failed to fetch data");
-            }
-        } catch (error) {
-            toast.error("Failed to fetch data");
-            console.error('Fetch error:', error);
-        } finally {
-            setIsLoading(false);
-        }
-    }
+    const data = wordsResponse?.data || [];
+    const paginationData = wordsResponse?.pagination || pagination;
 
-    const handleSetData = (newData) => {
-        // Refresh data after adding/deleting words
-        fetchData(1, filters);
-    };
-
-    const handleFilter = (filterType) => {
-        const newFilters = { ...filters, type: filterType === 'All' ? '' : filterType };
-        setFilters(newFilters);
-        fetchData(1, newFilters);
-    };
-
-    const handleSort = (sortType) => {
-        const newFilters = { ...filters, sort: sortType };
-        setFilters(newFilters);
-        fetchData(1, newFilters);
-    };
-
-    const handleSearch = (searchTerm) => {
-        const newFilters = { ...filters, search: searchTerm };
-        setFilters(newFilters);
-        fetchData(1, newFilters);
-    };
-
-    const handlePageChange = (newPage) => {
-        fetchData(newPage, filters);
-    };
-
+    // Update pagination in Redux when data changes
     useEffect(() => {
-        fetchData();
-    }, []);
+        if (wordsResponse?.pagination) {
+            dispatch(setPagination(wordsResponse.pagination));
+        }
+    }, [wordsResponse?.pagination, dispatch]);
+
+
+    const handleFilter = useCallback((filterType) => {
+        dispatch(setTypeFilter(filterType === 'All' ? '' : filterType));
+        dispatch(setCurrentPage(1));
+    }, [dispatch]);
+
+    const handleSort = useCallback((sortType) => {
+        dispatch(setSort(sortType));
+        dispatch(setCurrentPage(1));
+    }, [dispatch]);
+
+    const handleSearch = useCallback((searchTerm) => {
+        dispatch(setSearch(searchTerm));
+        dispatch(setCurrentPage(1));
+    }, [dispatch]);
+
+    const handlePageChange = useCallback((newPage) => {
+        dispatch(setCurrentPage(newPage));
+    }, [dispatch]);
+
+    const handleSetData = useCallback(() => {
+        // RTK Query automatically handles refetching
+        refetch();
+    }, [refetch]);
+
+    // Show error toast if there's an error
+    useEffect(() => {
+        if (error) {
+            toast.error('Failed to fetch words');
+            console.error('Words fetch error:', error);
+        }
+    }, [error]);
 
     return (
         <>
@@ -104,13 +96,13 @@ const Accordion = ({ rate }) => {
                 onSearch={handleSearch}
                 onSort={handleSort}
             />
-            {isLoading ? (
+            {(isLoading || isFetching) ? (
                 <TableSkeleton />
             ) : data.length ? (
                 <Table
                     data={data}
                     updateData={handleSetData}
-                    pagination={pagination}
+                    pagination={paginationData}
                     onPageChange={handlePageChange}
                     rate={rate}
                     onFilterChange={handleFilter}
@@ -119,29 +111,34 @@ const Accordion = ({ rate }) => {
                     filters={filters}
                 />
             ) : (
-                <EmptyState onAddWord={() => setModalOpen(true)} />
+                <EmptyState onAddWord={() => {}} />
             )}
         </>
     );
 };
 
-const WordForm = ({ onWordAdd, onSearch, onSort }) => {
+const WordForm = React.memo(({ onWordAdd }) => {
     const formRef = useRef(null);
     const [isModalOpen, setModalOpen] = useState(false);
-    const [isLoading, setIsLoading] = useState(false);
+    const [addWord, { isLoading: isAddingWord }] = useAddWordMutation();
 
-    async function handleSubmit(formData) {
-        setIsLoading(true);
-        const result = await addWord(formData);
-        if (result.success) {
-            onWordAdd(JSON.parse(result.data));
+    const handleSubmit = async (formData) => {
+        try {
+            const wordData = {
+                germanWord: formData.get('germanWord'),
+                englishWord: formData.get('englishWord'),
+                type: formData.get('type')
+            };
+            
+            await addWord(wordData).unwrap();
             toast.success("Word added successfully!");
-            formRef.current.reset();
-        } else {
-            toast.error(result.error || "Failed to add word");
+            formRef.current?.reset();
+            if (onWordAdd) onWordAdd();
+        } catch (error) {
+            console.error('Add word error:', error);
+            toast.error(error?.data?.message || "Failed to add word");
         }
-        setIsLoading(false);
-    }
+    };
 
     const toggleModal = () => setModalOpen((prev) => !prev);
 
@@ -160,9 +157,9 @@ const WordForm = ({ onWordAdd, onSearch, onSort }) => {
                         <FormTemplate
                             ref={formRef}
                             action={handleSubmit}
-                            isLoading={isLoading}
-                            setIsLoading={setIsLoading}
+                            isLoading={isAddingWord}
                             closeModal={toggleModal}
+                            isModal={true}
                         />
                     </Modal>
                 )}
@@ -170,22 +167,23 @@ const WordForm = ({ onWordAdd, onSearch, onSort }) => {
                 <FormTemplate
                     ref={formRef}
                     action={handleSubmit}
-                    isLoading={isLoading}
-                    onSearch={onSearch}
-                    setIsLoading={setIsLoading}
+                    isLoading={isAddingWord}
                     className="hidden sm:flex gap-6 lg:gap-10 items-end flex-1"
                 />
             </div>
         </>
     );
-};
+});
+
+WordForm.displayName = 'WordForm';
 
 const FormTemplate = React.forwardRef(
-    ({ action, isLoading, closeModal, onSearch, setIsLoading, ...props }, ref) => {
+    ({ action, isLoading, closeModal, ...props }, ref) => {
         const germanRef = useRef(null);
         const englishRef = useRef(null);
         const [formErrors, setFormErrors] = useState({});
         const [isFormValid, setIsFormValid] = useState(false);
+        const [translateWord, { isLoading: isTranslating }] = useTranslateWordMutation();
 
         const validateField = (name, value) => {
             const errors = { ...formErrors };
@@ -223,16 +221,28 @@ const FormTemplate = React.forwardRef(
         };
 
         const handleTranslate = async () => {
-            const formData = new FormData(ref.current);
-            setIsLoading(true);
-            const result = await Translate(formData);
-            if (result.success) {
-                englishRef.current.value = result["en-US"] || "";
-                germanRef.current.value = result.de || "";
-                validateField('englishWord', result["en-US"] || "");
-                validateField('germanWord', result.de || "");
+            try {
+                const formData = new FormData(ref.current);
+                const wordData = {
+                    germanWord: formData.get('germanWord'),
+                    englishWord: formData.get('englishWord')
+                };
+                
+                const result = await translateWord(wordData).unwrap();
+                
+                if (result.englishWord) {
+                    englishRef.current.value = result.englishWord;
+                    validateField('englishWord', result.englishWord);
+                }
+                if (result.germanWord) {
+                    germanRef.current.value = result.germanWord;
+                    validateField('germanWord', result.germanWord);
+                }
+                toast.success("Translation completed!");
+            } catch (error) {
+                console.error('Translation error:', error);
+                toast.error("Translation failed. Please try again.");
             }
-            setIsLoading(false);
         };
 
         const handleClearForm = () => {
@@ -245,12 +255,12 @@ const FormTemplate = React.forwardRef(
         const handleKeyDown = (e) => {
             if (e.ctrlKey && e.key === 'Enter') {
                 e.preventDefault();
-                if (isFormValid && !isLoading) {
+                if (isFormValid && !isLoading && !isTranslating) {
                     ref.current?.requestSubmit();
                 }
             } else if (e.ctrlKey && e.key === 't') {
                 e.preventDefault();
-                if (!isLoading) {
+                if (!isLoading && !isTranslating) {
                     handleTranslate();
                 }
             } else if (e.key === 'Escape') {
@@ -348,17 +358,17 @@ const FormTemplate = React.forwardRef(
                         }}
                         whileTap={{ scale: 0.95 }}
                         type="submit"
-                        disabled={isLoading || !isFormValid}
+                        disabled={isLoading || isTranslating || !isFormValid}
                         className={`${
                             props.isModal ? "w-full" : "flex-1"
                         } flex justify-center py-3 px-4 rounded-md shadow-sm text-sm font-medium transition-colors min-h-[44px] ${
-                            isLoading || !isFormValid 
+                            isLoading || isTranslating || !isFormValid 
                                 ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                                 : 'bg-gray-200 text-primary hover:bg-tertiary hover:text-gray-100'
                         }`}
                         title="Add word (Ctrl+Enter)"
                     >
-                        {isLoading ? (
+                        {(isLoading || isTranslating) ? (
                             <FaSpinner className="animate-spin w-5 h-5" />
                         ) : (
                             "Add"
@@ -372,13 +382,17 @@ const FormTemplate = React.forwardRef(
                         whileTap={{ scale: 0.95 }}
                         type="button"
                         onClick={handleTranslate}
-                        disabled={isLoading}
+                        disabled={isLoading || isTranslating}
                         className={`${
                             props.isModal ? "w-full" : "flex-1"
-                        } flex justify-center py-3 px-4 rounded-md shadow-sm text-sm font-medium bg-yellow-200 text-primary hover:bg-yellow-300 transition-colors min-h-[44px]`}
+                        } flex justify-center py-3 px-4 rounded-md shadow-sm text-sm font-medium transition-colors min-h-[44px] ${
+                            isLoading || isTranslating 
+                                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                : 'bg-yellow-200 text-primary hover:bg-yellow-300'
+                        }`}
                         title="Translate (Ctrl+T)"
                     >
-                        {isLoading ? (
+                        {isTranslating ? (
                             <FaSpinner className="animate-spin w-5 h-5" />
                         ) : (
                             "Translate"
@@ -392,7 +406,7 @@ const FormTemplate = React.forwardRef(
                         whileTap={{ scale: 0.95 }}
                         type="button"
                         onClick={handleClearForm}
-                        disabled={isLoading}
+                        disabled={isLoading || isTranslating}
                         className={`${
                             props.isModal ? "w-full" : "w-auto lg:flex-1"
                         } flex justify-center py-3 px-4 rounded-md shadow-sm text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors min-h-[44px]`}
@@ -414,6 +428,8 @@ const FormTemplate = React.forwardRef(
         );
     }
 );
+
+FormTemplate.displayName = 'FormTemplate';
 
 // Empty State Component
 const EmptyState = ({ onAddWord }) => {

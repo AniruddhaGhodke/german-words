@@ -25,13 +25,13 @@ const Welcome = ({ name }) => {
                     className="absolute left-1/2 -translate-x-1/2 bottom-[25%] sm:bottom-[20%] flex items-center justify-center group"
                     aria-label="Scroll to content"
                 >
-                    <div className="w-[32px] h-[56px] sm:w-[40px] sm:h-[70px] lg:w-[44px] lg:h-[76px] rounded-3xl border-3 sm:border-4 border-[hsl(199,60%,55%)] flex justify-center items-start p-2 sm:p-3 transition-all duration-300 group-hover:border-[hsl(199,70%,65%)] group-hover:scale-110">
+                    <div className="w-[32px] h-[56px] sm:w-[40px] sm:h-[70px] lg:w-[44px] lg:h-[76px] rounded-3xl border-3 border-4 border-[hsl(199,60%,55%)] flex justify-center items-start p-2 sm:p-3 transition-all duration-300 group-hover:border-[hsl(199,70%,65%)] group-hover:scale-110">
                         <motion.div
                             animate={{
-                                y: [0, "40%", 0],
+                                y: [0, "350%", 0],
                             }}
                             transition={{
-                                duration: 2,
+                                duration: 3,
                                 repeat: Infinity,
                                 repeatType: "loop",
                                 ease: "easeInOut",

@@ -3,28 +3,43 @@
 import { signOut, useSession } from "next-auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useAppSelector, useAppDispatch } from "@/store/hooks";
+import { 
+    selectIsMobileMenuOpen, 
+    selectModalState,
+    toggleMobileMenu,
+    setMobileMenu,
+    openModal,
+    closeModal
+} from "@/store/slices/uiSlice";
 import TTSSelector from "./TTSSelector";
 
 export default function Header() {
     const { data: session, status } = useSession();
     const router = useRouter();
-    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-    const [isTTSSelectorOpen, setIsTTSSelectorOpen] = useState(false);
+    const dispatch = useAppDispatch();
+    
+    // RTK State
+    const isMobileMenuOpen = useAppSelector(selectIsMobileMenuOpen);
+    const ttsModal = useAppSelector(selectModalState('ttsSelector'));
     
     const handleSignOut = async () => {
-        await signOut({ redirect: false });
-        router.refresh();
+        await signOut();
     };
     
-    const toggleMobileMenu = () => {
-        setIsMobileMenuOpen(!isMobileMenuOpen);
+    const handleToggleMobileMenu = () => {
+        dispatch(toggleMobileMenu());
     };
     
     const openTTSSelector = () => {
-        setIsTTSSelectorOpen(true);
-        setIsMobileMenuOpen(false);
+        dispatch(openModal({ modalType: 'ttsSelector' }));
+        dispatch(setMobileMenu(false));
     };
+    
+    const closeMobileMenu = () => {
+        dispatch(setMobileMenu(false));
+    };
+
     return (
         <header className="bg-primary text-white w-full top-0 left-0 z-20 absolute">
             <div className="absolute inset-0 opacity-40"></div>
@@ -75,7 +90,7 @@ export default function Header() {
                             
                             {/* Mobile hamburger menu */}
                             <button
-                                onClick={toggleMobileMenu}
+                                onClick={handleToggleMobileMenu}
                                 className="sm:hidden bg-gray-900 hover:bg-gray-700 text-[hsl(199,60%,55%)] font-bold p-3 rounded focus:outline-none focus:ring-2 focus:ring-[hsl(199,60%,55%)]"
                                 aria-label="Toggle menu"
                             >
@@ -107,14 +122,14 @@ export default function Header() {
                             <Link
                                 href="/my-stories"
                                 className="block w-full text-left text-[hsl(199,60%,55%)] font-semibold py-3 px-4 rounded hover:bg-gray-800 transition-colors min-h-[44px] flex items-center"
-                                onClick={() => setIsMobileMenuOpen(false)}
+                                onClick={closeMobileMenu}
                             >
                                 📚 My Stories
                             </Link>
                             <Link
                                 href="/wordGame"
                                 className="block w-full text-left text-[hsl(199,60%,55%)] font-semibold py-3 px-4 rounded hover:bg-gray-800 transition-colors min-h-[44px] flex items-center"
-                                onClick={() => setIsMobileMenuOpen(false)}
+                                onClick={closeMobileMenu}
                             >
                                 🎯 Word Challenge
                             </Link>
@@ -127,7 +142,7 @@ export default function Header() {
                             <button
                                 onClick={() => {
                                     handleSignOut();
-                                    setIsMobileMenuOpen(false);
+                                    closeMobileMenu();
                                 }}
                                 className="block w-full text-left text-[hsl(199,60%,55%)] font-semibold py-3 px-4 rounded hover:bg-gray-800 transition-colors min-h-[44px] flex items-center"
                             >
@@ -140,8 +155,8 @@ export default function Header() {
             
             {/* TTS Selector Modal */}
             <TTSSelector
-                isOpen={isTTSSelectorOpen}
-                onClose={() => setIsTTSSelectorOpen(false)}
+                isOpen={ttsModal.isOpen}
+                onClose={() => dispatch(closeModal('ttsSelector'))}
             />
         </header>
     );

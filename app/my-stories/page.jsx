@@ -1,44 +1,87 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-    FaBookOpen, 
-    FaSearch, 
-    FaFilter, 
-    FaSort, 
-    FaEye, 
-    FaTrash, 
-    FaDownload, 
+import {
+    FaBookOpen,
+    FaSearch,
+    FaFilter,
+    FaSort,
+    FaEye,
+    FaTrash,
+    FaDownload,
     FaSpinner,
     FaCalendarAlt,
     FaLanguage,
     FaTags
 } from "react-icons/fa";
 import toast from "react-hot-toast";
+import { useAppSelector, useAppDispatch } from "@/store/hooks";
+import { 
+    useGetStoriesQuery,
+    useDeleteStoryMutation 
+} from "@/store/api/storiesApi";
+import {
+    selectStories,
+    selectSelectedStory,
+    selectStoriesPagination,
+    selectStoriesFilters,
+    selectDeleteConfirmId,
+    setSelectedStory,
+    setPagination,
+    setCurrentPage,
+    setSearch,
+    setStyleFilter,
+    setSortBy,
+    setSortOrder,
+    setDeleteConfirmId,
+    setExporting
+} from "@/store/slices/storiesSlice";
 import StoryViewer from "@/components/StoryViewer";
-import { migrateLocalStorageStories, hasLocalStorageStories } from "@/utils/storyMigration";
 
 export default function MyStoriesPage() {
     const { data: session, status } = useSession();
     const router = useRouter();
+    const dispatch = useAppDispatch();
     
-    const [stories, setStories] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [pagination, setPagination] = useState({});
-    const [selectedStory, setSelectedStory] = useState(null);
-    const [deleteConfirm, setDeleteConfirm] = useState(null);
-    const [showMigration, setShowMigration] = useState(false);
-    const [migrating, setMigrating] = useState(false);
+    // RTK State
+    const stories = useAppSelector(selectStories);
     
-    // Filters and sorting
-    const [searchTerm, setSearchTerm] = useState("");
-    const [styleFilter, setStyleFilter] = useState("all");
-    const [sortBy, setSortBy] = useState("createdAt");
-    const [sortOrder, setSortOrder] = useState("desc");
-    const [currentPage, setCurrentPage] = useState(1);
+    const selectedStory = useAppSelector(selectSelectedStory);
+    const pagination = useAppSelector(selectStoriesPagination);
+    const filters = useAppSelector(selectStoriesFilters);
+    const deleteConfirmId = useAppSelector(selectDeleteConfirmId);
+    
+    // RTK Query
+    const {
+        data: storiesResponse,
+        error,
+        isLoading,
+        isFetching,
+        refetch
+    } = useGetStoriesQuery({
+        page: pagination.page,
+        limit: pagination.limit,
+        sortBy: filters.sortBy,
+        sortOrder: filters.sortOrder,
+        style: filters.style,
+        search: filters.search
+    }, {
+        skip: !session?.user,
+        refetchOnMountOrArgChange: true
+    });
+    
+    // RTK Mutations
+    const [deleteStory, { isLoading: isDeleting }] = useDeleteStoryMutation();
+
+    // Update local state when data changes
+    useEffect(() => {
+        if (storiesResponse) {
+            dispatch(setPagination(storiesResponse.pagination));
+        }
+    }, [storiesResponse, dispatch]);
 
     // Redirect if not authenticated
     useEffect(() => {
@@ -48,107 +91,29 @@ export default function MyStoriesPage() {
         }
     }, [status, router]);
 
-    // Fetch stories
-    const fetchStories = async (page = 1) => {
-        if (!session?.user) return;
-        
-        try {
-            setLoading(true);
-            
-            const params = new URLSearchParams({
-                page: page.toString(),
-                limit: "12",
-                sortBy,
-                sortOrder,
-                style: styleFilter,
-                search: searchTerm
-            });
-            
-            const response = await fetch(`/api/stories?${params}`);
-            const result = await response.json();
-            
-            if (result.success) {
-                setStories(result.data.stories);
-                setPagination(result.data.pagination);
-                setCurrentPage(page);
-            } else {
-                throw new Error(result.error || "Failed to fetch stories");
-            }
-        } catch (error) {
-            console.error("Error fetching stories:", error);
-            toast.error(error.message || "Failed to load stories");
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    // Check for localStorage stories on first load
-    useEffect(() => {
-        if (session?.user && hasLocalStorageStories()) {
-            setShowMigration(true);
-        }
-    }, [session]);
-
-    // Initial load and when filters change
-    useEffect(() => {
-        if (session?.user) {
-            fetchStories(1);
-        }
-    }, [session, searchTerm, styleFilter, sortBy, sortOrder]);
 
     // Handle page change
     const handlePageChange = (page) => {
-        fetchStories(page);
+        dispatch(setCurrentPage(page));
     };
 
     // Handle story deletion
     const handleDeleteStory = async (storyId) => {
         try {
-            const response = await fetch(`/api/stories/${storyId}`, {
-                method: 'DELETE'
-            });
-            
-            const result = await response.json();
-            
-            if (result.success) {
-                toast.success("Story deleted successfully!");
-                setStories(stories.filter(story => story._id !== storyId));
-                setDeleteConfirm(null);
-            } else {
-                throw new Error(result.error || "Failed to delete story");
-            }
+            await deleteStory(storyId).unwrap();
+            toast.success("Story deleted successfully!");
+            dispatch(setDeleteConfirmId(null));
         } catch (error) {
             console.error("Error deleting story:", error);
-            toast.error(error.message || "Failed to delete story");
+            toast.error(error?.data?.message || "Failed to delete story");
         }
     };
 
-    // Handle localStorage migration
-    const handleMigration = async () => {
-        setMigrating(true);
-        try {
-            const result = await migrateLocalStorageStories();
-            if (result && result.migrated > 0) {
-                toast.success(`Successfully migrated ${result.migrated} stories!`);
-                setShowMigration(false);
-                // Refresh the stories list
-                fetchStories(1);
-            } else if (result && result.failed > 0) {
-                toast.error(`Migration completed with ${result.failed} failures`);
-            } else {
-                toast.error("No stories found to migrate");
-            }
-        } catch (error) {
-            console.error("Migration error:", error);
-            toast.error("Migration failed");
-        } finally {
-            setMigrating(false);
-        }
-    };
 
     // Handle story export
     const handleExportStory = (story) => {
         try {
+            dispatch(setExporting(true));
             const exportContent = `Bilingual German Learning Story
 Generated on: ${new Date(story.createdAt).toLocaleDateString()}
 Title: ${story.title}
@@ -179,6 +144,8 @@ Generated with German Words Learning App`;
         } catch (error) {
             console.error("Error exporting story:", error);
             toast.error("Failed to export story");
+        } finally {
+            dispatch(setExporting(false));
         }
     };
 
@@ -200,7 +167,7 @@ Generated with German Words Learning App`;
         const created = new Date(date);
         const diffTime = Math.abs(now - created);
         const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-        
+
         if (diffDays === 0) {
             const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
             if (diffHours === 0) {
@@ -217,6 +184,33 @@ Generated with German Words Learning App`;
         }
     };
 
+    // Handle search change
+    const handleSearchChange = (value) => {
+        dispatch(setSearch(value));
+        dispatch(setCurrentPage(1));
+    };
+
+    // Handle filter change
+    const handleStyleFilterChange = (style) => {
+        dispatch(setStyleFilter(style));
+        dispatch(setCurrentPage(1));
+    };
+
+    // Handle sort change
+    const handleSortChange = (sortBy, sortOrder) => {
+        dispatch(setSortBy(sortBy));
+        dispatch(setSortOrder(sortOrder));
+        dispatch(setCurrentPage(1));
+    };
+
+    // Show error toast if there's an error
+    useEffect(() => {
+        if (error) {
+            toast.error('Failed to fetch stories');
+            console.error('Stories fetch error:', error);
+        }
+    }, [error]);
+
     if (status === "loading") {
         return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -231,6 +225,8 @@ Generated with German Words Learning App`;
     if (status === "unauthenticated") {
         return null; // Will redirect in useEffect
     }
+
+    const currentStories = storiesResponse?.stories || [];
 
     return (
         <div className="min-h-screen bg-[url('/blob-haikei-1.svg')] bg-primary bg-cover bg-center pt-24">
@@ -255,7 +251,7 @@ Generated with German Words Learning App`;
                     >
                         <FaBookOpen className="text-4xl text-white" />
                     </motion.div>
-                    <motion.h1 
+                    <motion.h1
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         transition={{ delay: 0.4 }}
@@ -263,20 +259,21 @@ Generated with German Words Learning App`;
                     >
                         My Story Collection
                     </motion.h1>
-                    <motion.p 
+                    <motion.p
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         transition={{ delay: 0.6 }}
                         className="text-xl text-gray-300 font-medium"
                     >
                         🌟 Your magical bilingual adventures await! ✨
-                        {pagination.totalCount > 0 && (
+                        {pagination.total > 0 && (
                             <span className="block mt-2 text-teriary font-bold">
-                                📚 {pagination.totalCount} amazing {pagination.totalCount === 1 ? 'story' : 'stories'} created!
+                                📚 {pagination.total} amazing {pagination.total === 1 ? 'story' : 'stories'} created!
                             </span>
                         )}
                     </motion.p>
                 </motion.div>
+
 
                 {/* Fun Filters and Search */}
                 <motion.div
@@ -290,7 +287,7 @@ Generated with German Words Learning App`;
                     <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-r from-secondary/10 to-transparent rounded-full transform -translate-x-12 translate-y-12"></div>
                     <div className="relative grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                         {/* Fun Search */}
-                        <motion.div 
+                        <motion.div
                             whileHover={{ scale: 1.02 }}
                             className="relative"
                         >
@@ -298,21 +295,21 @@ Generated with German Words Learning App`;
                             <input
                                 type="text"
                                 placeholder="🔍 Find your story..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
+                                value={filters.search}
+                                onChange={(e) => handleSearchChange(e.target.value)}
                                 className="w-full pl-12 pr-4 py-3 border-2 border-teriary/30 rounded-xl focus:ring-4 focus:ring-teriary/20 focus:border-teriary transition-all bg-gradient-to-r from-white to-teriary/5 font-medium"
                             />
                         </motion.div>
 
                         {/* Style Filter */}
-                        <motion.div 
+                        <motion.div
                             whileHover={{ scale: 1.02 }}
                             className="relative"
                         >
                             <FaFilter className="absolute left-4 top-1/2 transform -translate-y-1/2 text-secondary z-10" />
                             <select
-                                value={styleFilter}
-                                onChange={(e) => setStyleFilter(e.target.value)}
+                                value={filters.style}
+                                onChange={(e) => handleStyleFilterChange(e.target.value)}
                                 className="w-full pl-12 pr-4 py-3 border-2 border-secondary/30 rounded-xl focus:ring-4 focus:ring-secondary/20 focus:border-secondary appearance-none bg-gradient-to-r from-white to-secondary/5 font-medium transition-all cursor-pointer"
                             >
                                 <option value="all">🌈 All Styles</option>
@@ -325,14 +322,14 @@ Generated with German Words Learning App`;
                         </motion.div>
 
                         {/* Sort By */}
-                        <motion.div 
+                        <motion.div
                             whileHover={{ scale: 1.02 }}
                             className="relative"
                         >
                             <FaSort className="absolute left-4 top-1/2 transform -translate-y-1/2 text-primary z-10" />
                             <select
-                                value={sortBy}
-                                onChange={(e) => setSortBy(e.target.value)}
+                                value={filters.sortBy}
+                                onChange={(e) => handleSortChange(e.target.value, filters.sortOrder)}
                                 className="w-full pl-12 pr-4 py-3 border-2 border-primary/30 rounded-xl focus:ring-4 focus:ring-primary/20 focus:border-primary appearance-none bg-gradient-to-r from-white to-primary/5 font-medium transition-all cursor-pointer"
                             >
                                 <option value="createdAt">📅 Date Created</option>
@@ -342,13 +339,13 @@ Generated with German Words Learning App`;
                         </motion.div>
 
                         {/* Sort Order */}
-                        <motion.div 
+                        <motion.div
                             whileHover={{ scale: 1.02 }}
                             className="relative"
                         >
                             <select
-                                value={sortOrder}
-                                onChange={(e) => setSortOrder(e.target.value)}
+                                value={filters.sortOrder}
+                                onChange={(e) => handleSortChange(filters.sortBy, e.target.value)}
                                 className="w-full px-4 py-3 border-2 border-teriary-800/30 rounded-xl focus:ring-4 focus:ring-teriary-800/20 focus:border-teriary-800 appearance-none bg-gradient-to-r from-white to-teriary-800/5 font-medium transition-all cursor-pointer"
                             >
                                 <option value="desc">⬇️ Newest First</option>
@@ -360,7 +357,7 @@ Generated with German Words Learning App`;
 
                 {/* Stories Grid */}
                 <AnimatePresence mode="wait">
-                    {loading ? (
+                    {(isLoading || isFetching) ? (
                         <motion.div
                             key="loading"
                             initial={{ opacity: 0 }}
@@ -382,7 +379,7 @@ Generated with German Words Learning App`;
                                 </div>
                             ))}
                         </motion.div>
-                    ) : stories.length === 0 ? (
+                    ) : currentStories.length === 0 ? (
                         <motion.div
                             key="empty"
                             initial={{ opacity: 0, y: 20 }}
@@ -392,7 +389,7 @@ Generated with German Words Learning App`;
                         >
                             <div className="mb-8">
                                 <motion.div
-                                    animate={{ 
+                                    animate={{
                                         y: [0, -10, 0],
                                         rotate: [0, 5, -5, 0]
                                     }}
@@ -428,7 +425,7 @@ Generated with German Words Learning App`;
                             exit={{ opacity: 0 }}
                             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
                         >
-                            {stories.map((story, index) => {
+                            {currentStories.map((story, index) => {
                                 // Get style colors
                                 const getStyleColors = (style) => {
                                     const colors = {
@@ -440,142 +437,147 @@ Generated with German Words Learning App`;
                                     };
                                     return colors[style] || colors.educational;
                                 };
-                                
+
                                 const styleColors = getStyleColors(story.preferences.style);
-                                
+
                                 return (
                                 <motion.div
                                     key={story._id}
                                     initial={{ opacity: 0, y: 20, rotateY: -15 }}
                                     animate={{ opacity: 1, y: 0, rotateY: 0 }}
-                                    transition={{ 
+                                    transition={{
                                         delay: index * 0.1,
                                         type: "spring",
-                                        stiffness: 100,
-                                        damping: 15
+                                        stiffness: 100
                                     }}
-                                    whileHover={{ 
-                                        y: -8, 
-                                        rotateY: 5,
-                                        scale: 1.02,
-                                        transition: { duration: 0.3 } 
+                                    whileHover={{
+                                        y: -8,
+                                        rotateY: 3,
+                                        transition: { duration: 0.3 }
                                     }}
                                     className="group relative"
-                                    style={{ perspective: "1000px" }}
                                 >
-                                    {/* Book spine effect */}
-                                    <div className={`absolute -left-2 top-4 bottom-4 w-6 bg-gradient-to-b ${styleColors.bg} rounded-l-lg shadow-lg transform group-hover:scale-105 transition-transform duration-300`}></div>
-                                    
-                                    {/* Main book cover */}
-                                    <div className="bg-white rounded-2xl shadow-xl border-4 border-white hover:shadow-2xl transition-all duration-300 overflow-hidden transform-gpu group-hover:shadow-teriary/20"
-                                         style={{ 
-                                             boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04), 0 0 0 1px rgba(0, 0, 0, 0.05)'
-                                         }}
-                                    >
-                                        {/* Colorful header stripe */}
-                                        <div className={`h-3 bg-gradient-to-r ${styleColors.bg}`}></div>
-                                        
+                                    {/* Magical Glow Effect */}
+                                    <div className="absolute -inset-1 bg-gradient-to-r from-blue-400 to-blue-600 rounded-2xl blur opacity-0 group-hover:opacity-20 transition duration-300"></div>
+
+                                    <div className="relative bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 border-2 border-white/50 overflow-hidden">
+                                        {/* Decorative Header */}
+                                        <div className="h-2 bg-gradient-to-r from-blue-400 to-blue-600"></div>
+
                                         <div className="p-6">
-                                            {/* Fun Story Header */}
-                                            <div className="flex items-start justify-between mb-6">
-                                                <div className="flex items-start gap-3">
+                                            {/* Header with style and date */}
+                                            <div className="flex justify-between items-start mb-4">
+                                                <div className="flex items-center gap-3">
                                                     <motion.div
-                                                        whileHover={{ scale: 1.2, rotate: 10 }}
-                                                        className={`text-4xl p-2 bg-${styleColors.light} rounded-full`}
+                                                        whileHover={{ rotate: 360, scale: 1.2 }}
+                                                        transition={{ duration: 0.5 }}
+                                                        className="p-2 bg-blue-50 rounded-full"
                                                     >
-                                                        {getStyleEmoji(story.preferences.style)}
+                                                        <span className="text-2xl">{getStyleEmoji(story.preferences.style)}</span>
                                                     </motion.div>
                                                     <div>
-                                                        <h3 className="font-nerko text-xl text-gray-800 line-clamp-2 leading-tight">
-                                                            {story.title}
-                                                        </h3>
-                                                        <div className="flex items-center gap-2 mt-2 text-sm text-gray-600">
-                                                            <FaCalendarAlt className="text-teriary" />
-                                                            <span className="font-medium">{getTimeAgo(story.createdAt)}</span>
+                                                        <p className="text-gray-600 font-semibold text-sm capitalize">
+                                                            {story.preferences.style}
+                                                        </p>
+                                                        <div className="flex items-center gap-1 text-xs text-gray-400">
+                                                            <FaCalendarAlt />
+                                                            <span>{getTimeAgo(story.createdAt)}</span>
                                                         </div>
                                                     </div>
                                                 </div>
+                                                <motion.div
+                                                    whileHover={{ scale: 1.1 }}
+                                                    className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-bold"
+                                                >
+                                                    ✨ Story
+                                                </motion.div>
                                             </div>
 
-                                            {/* Fun Story Preview */}
-                                            <div className="mb-6 p-4 bg-gradient-to-r from-gray-50 to-white rounded-xl border-2 border-dashed border-gray-200">
-                                                <p className="text-gray-700 line-clamp-3 italic leading-relaxed">
-                                                    "{story.germanPreview}"
+                                            {/* Story Title */}
+                                            <motion.h3
+                                                whileHover={{ scale: 1.02 }}
+                                                className="text-xl font-bold text-gray-800 mb-3 group-hover:text-teriary transition-colors duration-300 line-clamp-2 cursor-pointer"
+                                            >
+                                                {story.title}
+                                            </motion.h3>
+
+                                            {/* Story Preview */}
+                                            <div className="mb-4">
+                                                <p className="text-sm text-gray-600 line-clamp-3 leading-relaxed">
+                                                    {story.germanStory?.substring(0, 120)}...
                                                 </p>
                                             </div>
 
-                                            {/* Colorful Words Used */}
-                                            <div className="mb-6">
-                                                <div className="flex items-center gap-2 mb-3">
-                                                    <FaTags className="text-teriary" />
-                                                    <span className="text-sm text-gray-700 font-bold">
-                                                        ✨ {story.wordsUsed.length} Magic Words:
-                                                    </span>
-                                                </div>
-                                                <div className="flex flex-wrap gap-2">
-                                                    {story.wordsUsed.slice(0, 4).map((word, idx) => (
-                                                        <motion.span
-                                                            key={idx}
-                                                            whileHover={{ scale: 1.1 }}
-                                                            className={`px-3 py-1 bg-${styleColors.accent} text-white text-sm rounded-full font-medium shadow-md cursor-pointer`}
-                                                        >
-                                                            {word.german}
-                                                        </motion.span>
-                                                    ))}
-                                                    {story.wordsUsed.length > 4 && (
-                                                        <span className="px-3 py-1 bg-gradient-to-r from-teriary to-teriary-800 text-white text-sm rounded-full font-medium shadow-md">
-                                                            +{story.wordsUsed.length - 4} more! 🎉
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            </div>
+                                            {/* Word Tags */}
+                                            {story.wordsUsed && story.wordsUsed.length > 0 && (
+                                                <div className="mb-6">
+                                                    <div className="flex items-center gap-2 mb-2">
+                                                        <FaLanguage className="text-teriary text-sm" />
+                                                        <span className="text-xs font-medium text-teriary">Vocabulary Used</span>
+                                                    </div>
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {story.wordsUsed.slice(0, 4).map((word, wordIndex) => {
+                                                            const getWordTagClasses = (style) => {
+                                                                const styleClasses = {
+                                                                    educational: 'bg-blue-100 text-blue-700 border-blue-200',
+                                                                    adventure: 'bg-green-100 text-green-700 border-green-200',
+                                                                    daily: 'bg-purple-100 text-purple-700 border-purple-200',
+                                                                    funny: 'bg-yellow-100 text-yellow-700 border-yellow-200',
+                                                                    mystery: 'bg-red-100 text-red-700 border-red-200'
+                                                                };
+                                                                return styleClasses[style] || styleClasses.educational;
+                                                            };
 
-                                        {/* Story Meta */}
-                                        <div className="flex items-center gap-4 text-xs text-gray-500 mb-4">
-                                            <div className="flex items-center gap-1">
-                                                <FaLanguage />
-                                                <span>Bilingual</span>
-                                            </div>
-                                            <div className="capitalize">
-                                                {story.preferences.length} length
-                                            </div>
-                                            <div className="capitalize">
-                                                {story.preferences.style}
-                                            </div>
-                                        </div>
+                                                            return (
+                                                                <motion.span
+                                                                    key={wordIndex}
+                                                                    whileHover={{ scale: 1.05 }}
+                                                                    className={`text-xs px-3 py-1 rounded-full font-medium border cursor-default ${getWordTagClasses(story.preferences.style)}`}
+                                                                >
+                                                                    {word.german}
+                                                                </motion.span>
+                                                            );
+                                                        })}
+                                                        {story.wordsUsed.length > 4 && (
+                                                            <span className="text-xs text-gray-400 font-medium px-2 py-1">
+                                                                +{story.wordsUsed.length - 4} more
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            )}
 
-                                            {/* Fun Actions */}
-                                            <div className="flex items-center justify-between pt-4 border-t-2 border-dashed border-gray-200">
+                                            {/* Action Buttons */}
+                                            <div className="flex gap-3">
                                                 <motion.button
                                                     whileHover={{ scale: 1.05 }}
                                                     whileTap={{ scale: 0.95 }}
-                                                    onClick={() => setSelectedStory(story)}
-                                                    className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-teriary to-teriary-800 text-white font-bold rounded-full hover:from-teriary-800 hover:to-teriary-900 transition-all duration-300 shadow-lg hover:shadow-xl"
+                                                    onClick={() => {
+                                                        dispatch(setSelectedStory(story));
+                                                    }}
+                                                    className="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 text-white px-4 py-3 rounded-xl hover:shadow-lg transition-all duration-300 flex items-center justify-center gap-2 font-semibold hover:from-blue-600 hover:to-blue-700"
                                                 >
-                                                    <FaEye />
-                                                    📖 Read Story
+                                                    <FaEye className="text-lg" />
+                                                    Read Story
                                                 </motion.button>
-                                                
-                                                <div className="flex items-center gap-3">
-                                                    <motion.button
-                                                        whileHover={{ scale: 1.1, rotate: 5 }}
-                                                        whileTap={{ scale: 0.9 }}
-                                                        onClick={() => handleExportStory(story)}
-                                                        className="p-3 text-secondary bg-secondary-100 hover:bg-secondary hover:text-white rounded-full transition-all duration-300 shadow-md hover:shadow-lg"
-                                                        title="Export story"
-                                                    >
-                                                        <FaDownload />
-                                                    </motion.button>
-                                                    <motion.button
-                                                        whileHover={{ scale: 1.1, rotate: -5 }}
-                                                        whileTap={{ scale: 0.9 }}
-                                                        onClick={() => setDeleteConfirm(story._id)}
-                                                        className="p-3 text-red-500 bg-red-100 hover:bg-red-500 hover:text-white rounded-full transition-all duration-300 shadow-md hover:shadow-lg"
-                                                        title="Delete story"
-                                                    >
-                                                        <FaTrash />
-                                                    </motion.button>
-                                                </div>
+                                                <motion.button
+                                                    whileHover={{ scale: 1.05 }}
+                                                    whileTap={{ scale: 0.95 }}
+                                                    onClick={() => handleExportStory(story)}
+                                                    className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-3 rounded-xl hover:shadow-lg transition-all duration-300 flex items-center justify-center"
+                                                    title="Export Story"
+                                                >
+                                                    <FaDownload className="text-lg" />
+                                                </motion.button>
+                                                <motion.button
+                                                    whileHover={{ scale: 1.05 }}
+                                                    whileTap={{ scale: 0.95 }}
+                                                    onClick={() => dispatch(setDeleteConfirmId(story._id))}
+                                                    className="bg-rose-500 hover:bg-rose-600 text-white px-4 py-3 rounded-xl hover:shadow-lg transition-all duration-300 flex items-center justify-center"
+                                                    title="Delete Story"
+                                                >
+                                                    <FaTrash className="text-lg" />
+                                                </motion.button>
                                             </div>
                                         </div>
                                     </div>
@@ -586,156 +588,157 @@ Generated with German Words Learning App`;
                     )}
                 </AnimatePresence>
 
-                {/* Pagination */}
-                {pagination.totalPages > 1 && !loading && (
+                {/* Fun Pagination */}
+                {pagination.totalPages > 1 && (
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="flex justify-center items-center gap-2 mt-8"
+                        transition={{ delay: 0.8 }}
+                        className="flex justify-center items-center gap-4 mt-16 mb-8"
                     >
-                        <button
-                            onClick={() => handlePageChange(currentPage - 1)}
-                            disabled={!pagination.hasPrevPage}
-                            className="px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
+                        <motion.button
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.9 }}
+                            onClick={() => handlePageChange(pagination.page - 1)}
+                            disabled={!pagination.hasPrev}
+                            className="px-6 py-3 bg-gradient-to-r from-teriary to-teriary-800 text-white rounded-full font-bold disabled:opacity-50 disabled:cursor-not-allowed hover:from-teriary-800 hover:to-teriary-900 transition-all shadow-lg hover:shadow-xl disabled:hover:scale-100"
                         >
-                            Previous
-                        </button>
-                        
-                        <div className="flex gap-1">
+                            ⬅️ Previous
+                        </motion.button>
+
+                        <div className="flex items-center gap-2">
                             {[...Array(pagination.totalPages)].map((_, index) => {
-                                const pageNumber = index + 1;
-                                const isCurrentPage = pageNumber === currentPage;
-                                
+                                const pageNum = index + 1;
+                                const isActive = pageNum === pagination.page;
                                 return (
-                                    <button
-                                        key={pageNumber}
-                                        onClick={() => handlePageChange(pageNumber)}
-                                        className={`px-3 py-2 rounded-lg transition-colors ${
-                                            isCurrentPage
-                                                ? 'bg-blue-600 text-white'
-                                                : 'border border-gray-300 hover:bg-gray-50'
+                                    <motion.button
+                                        key={pageNum}
+                                        whileHover={{ scale: 1.2 }}
+                                        whileTap={{ scale: 0.9 }}
+                                        onClick={() => handlePageChange(pageNum)}
+                                        className={`w-10 h-10 rounded-full font-bold transition-all ${
+                                            isActive
+                                                ? 'bg-gradient-to-br from-teriary to-teriary-800 text-white shadow-lg transform scale-110'
+                                                : 'bg-white text-teriary hover:bg-teriary/10 border-2 border-teriary/20'
                                         }`}
                                     >
-                                        {pageNumber}
-                                    </button>
+                                        {pageNum}
+                                    </motion.button>
                                 );
                             })}
                         </div>
-                        
-                        <button
-                            onClick={() => handlePageChange(currentPage + 1)}
-                            disabled={!pagination.hasNextPage}
-                            className="px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
+
+                        <motion.button
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.9 }}
+                            onClick={() => handlePageChange(pagination.page + 1)}
+                            disabled={!pagination.hasNext}
+                            className="px-6 py-3 bg-gradient-to-r from-teriary to-teriary-800 text-white rounded-full font-bold disabled:opacity-50 disabled:cursor-not-allowed hover:from-teriary-800 hover:to-teriary-900 transition-all shadow-lg hover:shadow-xl disabled:hover:scale-100"
                         >
-                            Next
-                        </button>
+                            Next ➡️
+                        </motion.button>
                     </motion.div>
                 )}
-            </div>
 
-            {/* Story Viewer Modal */}
-            {selectedStory && (
-                <StoryViewer
-                    story={selectedStory}
-                    onClose={() => setSelectedStory(null)}
-                />
-            )}
+                {/* Story Viewer Modal */}
+                {selectedStory && (
+                    <StoryViewer
+                        story={selectedStory}
+                        isOpen={!!selectedStory}
+                        onClose={() => dispatch(setSelectedStory(null))}
+                    />
+                )}
 
-            {/* Migration Modal */}
-            <AnimatePresence>
-                {showMigration && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
-                    >
+                {/* Fun Delete Confirmation Modal */}
+                <AnimatePresence>
+                    {deleteConfirmId && (
                         <motion.div
-                            initial={{ scale: 0.9, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.9, opacity: 0 }}
-                            className="bg-white rounded-lg shadow-xl max-w-md w-full p-6"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
                         >
-                            <div className="text-center mb-6">
-                                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                    <FaBookOpen className="text-2xl text-blue-600" />
+                            <motion.div
+                                initial={{ scale: 0.8, opacity: 0, rotateY: -30 }}
+                                animate={{ scale: 1, opacity: 1, rotateY: 0 }}
+                                exit={{ scale: 0.8, opacity: 0, rotateY: 30 }}
+                                transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                                className="bg-white/95 backdrop-blur-sm rounded-3xl p-8 max-w-md w-full shadow-2xl border-4 border-white/20 relative overflow-hidden"
+                            >
+                                {/* Decorative elements */}
+                                <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-l from-rose-200/30 to-transparent rounded-full transform translate-x-8 -translate-y-8"></div>
+                                <div className="absolute bottom-0 left-0 w-20 h-20 bg-gradient-to-r from-orange-200/30 to-transparent rounded-full transform -translate-x-8 translate-y-8"></div>
+
+                                <div className="relative text-center">
+                                    <motion.div
+                                        animate={{
+                                            rotate: [0, -5, 5, -5, 0],
+                                            scale: [1, 1.1, 1]
+                                        }}
+                                        transition={{
+                                            duration: 0.8,
+                                            repeat: Infinity,
+                                            repeatDelay: 2
+                                        }}
+                                        className="w-20 h-20 bg-gradient-to-br from-rose-400 to-rose-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg"
+                                    >
+                                        <FaTrash className="text-3xl text-white" />
+                                    </motion.div>
+
+                                    <motion.h3
+                                        initial={{ y: -20 }}
+                                        animate={{ y: 0 }}
+                                        className="text-3xl font-nerko text-rose-600 mb-4"
+                                    >
+                                        Delete This Story?
+                                    </motion.h3>
+
+                                    <motion.p
+                                        initial={{ y: 20, opacity: 0 }}
+                                        animate={{ y: 0, opacity: 1 }}
+                                        transition={{ delay: 0.2 }}
+                                        className="text-gray-600 mb-8 text-lg font-medium leading-relaxed"
+                                    >
+                                        🗑️ This magical story will be gone forever! <br />
+                                        Are you absolutely sure? ✨
+                                    </motion.p>
+
+                                    <div className="flex gap-4">
+                                        <motion.button
+                                            whileHover={{ scale: 1.05 }}
+                                            whileTap={{ scale: 0.95 }}
+                                            onClick={() => dispatch(setDeleteConfirmId(null))}
+                                            className="flex-1 px-6 py-3 bg-gradient-to-r from-gray-200 to-gray-300 text-gray-800 rounded-2xl font-bold hover:from-gray-300 hover:to-gray-400 transition-all duration-300 shadow-lg hover:shadow-xl"
+                                            disabled={isDeleting}
+                                        >
+                                            🤔 Keep It
+                                        </motion.button>
+                                        <motion.button
+                                            whileHover={{ scale: 1.05 }}
+                                            whileTap={{ scale: 0.95 }}
+                                            onClick={() => handleDeleteStory(deleteConfirmId)}
+                                            disabled={isDeleting}
+                                            className="flex-1 px-6 py-3 bg-gradient-to-r from-rose-500 to-rose-600 text-white rounded-2xl font-bold hover:from-rose-600 hover:to-rose-700 transition-all duration-300 shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
+                                        >
+                                            {isDeleting ? (
+                                                <>
+                                                    <FaSpinner className="animate-spin" />
+                                                    Deleting...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <FaTrash />
+                                                    🗑️ Delete It
+                                                </>
+                                            )}
+                                        </motion.button>
+                                    </div>
                                 </div>
-                                <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                                    Migrate Your Stories
-                                </h3>
-                                <p className="text-gray-600">
-                                    We found stories saved in your browser. Would you like to migrate them to your account for better storage and access across devices?
-                                </p>
-                            </div>
-                            
-                            <div className="flex gap-3">
-                                <button
-                                    onClick={() => setShowMigration(false)}
-                                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                                    disabled={migrating}
-                                >
-                                    Skip
-                                </button>
-                                <button
-                                    onClick={handleMigration}
-                                    disabled={migrating}
-                                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                                >
-                                    {migrating ? (
-                                        <>
-                                            <FaSpinner className="animate-spin" />
-                                            Migrating...
-                                        </>
-                                    ) : (
-                                        'Migrate Stories'
-                                    )}
-                                </button>
-                            </div>
+                            </motion.div>
                         </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-            {/* Delete Confirmation Modal */}
-            <AnimatePresence>
-                {deleteConfirm && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
-                        onClick={(e) => e.target === e.currentTarget && setDeleteConfirm(null)}
-                    >
-                        <motion.div
-                            initial={{ scale: 0.9, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.9, opacity: 0 }}
-                            className="bg-white rounded-lg shadow-xl max-w-md w-full p-6"
-                        >
-                            <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                                Delete Story?
-                            </h3>
-                            <p className="text-gray-600 mb-6">
-                                Are you sure you want to delete this story? This action cannot be undone.
-                            </p>
-                            <div className="flex gap-3">
-                                <button
-                                    onClick={() => setDeleteConfirm(null)}
-                                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    onClick={() => handleDeleteStory(deleteConfirm)}
-                                    className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-                                >
-                                    Delete
-                                </button>
-                            </div>
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+                    )}
+                </AnimatePresence>
+            </div>
         </div>
     );
 }

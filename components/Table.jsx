@@ -1,12 +1,37 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { motion } from "framer-motion";
 import toast from "react-hot-toast";
+import { useAppSelector, useAppDispatch } from "@/store/hooks";
+import { 
+    useDeleteWordMutation, 
+    useDeleteWordsMutation 
+} from "@/store/api/wordsApi";
+import {
+    selectSelectedWords,
+    selectIsSelectMode,
+    selectShowGerman,
+    selectShowEnglish,
+    toggleSelectedWord,
+    addSelectedWord,
+    removeSelectedWord,
+    setSelectedWords,
+    clearSelectedWords,
+    setSelectMode,
+    setShowGerman,
+    setShowEnglish
+} from "@/store/slices/wordsSlice";
+import {
+    selectModalState,
+    openModal,
+    closeModal
+} from "@/store/slices/uiSlice";
 import FlashcardModal from "./FlashcardModal";
 import PronunciationTrainerModal from "./PronunciationTrainerModal";
 import StoryGeneratorModal from "./StoryGeneratorModal";
+
 const HEADERS = ["German word", "English word", "Type", "Actions"];
 
-export default function Component({
+function Component({
     data,
     updateData,
     pagination,
@@ -17,23 +42,56 @@ export default function Component({
     onSort,
     filters,
 }) {
-    const [loading, setLoading] = useState(false);
-    const [searchTerm, setSearchTerm] = useState(filters?.search || "");
-    const [filterType, setFilterType] = useState(filters?.type || "All");
-    const [selectedWords, setSelectedWords] = useState(new Set());
-    const [isSelectMode, setIsSelectMode] = useState(false);
-    const [flashcardWord, setFlashcardWord] = useState(null);
-    const [pronunciationWord, setPronunciationWord] = useState(null);
-    const [storyGeneratorOpen, setStoryGeneratorOpen] = useState(false);
-    const [showGerman, setShowGerman] = useState(true);
-    const [showEnglish, setShowEnglish] = useState(true);
-    const records = data; // Data is already paginated from server
+    const dispatch = useAppDispatch();
 
-    const modalRefs = useRef({});
+    // RTK State
+    const selectedWords = useAppSelector(selectSelectedWords);
+    const isSelectMode = useAppSelector(selectIsSelectMode);
+    const showGerman = useAppSelector(selectShowGerman);
+    const showEnglish = useAppSelector(selectShowEnglish);
+
+    // Modal states from RTK
+    const flashcardModal = useAppSelector(selectModalState('flashcard'));
+    const pronunciationModal = useAppSelector(selectModalState('pronunciation'));
+    const storyGeneratorModal = useAppSelector(selectModalState('storyGenerator'));
+
+    // RTK Mutations
+    const [deleteWord, { isLoading: isDeleting }] = useDeleteWordMutation();
+    const [deleteWords, { isLoading: isBulkDeleting }] = useDeleteWordsMutation();
+
+    const records = data;
+
+    // Local search state for debouncing (isolated from parent)
+    const [searchInput, setSearchInput] = useState(filters?.search || "");
+    const [isSearching, setIsSearching] = useState(false);
+    const filterType = filters?.type || "All";
+
+    // Initialize searchInput when filters.search changes from parent (only on mount or external filter change)
+    useEffect(() => {
+        setSearchInput(filters?.search || "");
+    }, [filters?.search]);
+
+    // Debounced search effect
+    useEffect(() => {
+        if (searchInput === filters?.search) {
+            setIsSearching(false);
+            return;
+        }
+
+        setIsSearching(true);
+        const timer = setTimeout(() => {
+            onSearch(searchInput);
+            setIsSearching(false);
+        }, 300);
+
+        return () => {
+            clearTimeout(timer);
+            setIsSearching(false);
+        };
+    }, [searchInput, onSearch, filters?.search]);
 
     async function handleSpeak(speakword) {
         try {
-            // Dynamic import to avoid SSR issues
             const { speakGermanWord } = await import("../utils/speechSynthesis");
             await speakGermanWord(speakword, {
                 rate: rate || 0.8,
@@ -47,110 +105,67 @@ export default function Component({
     }
 
     async function handleDelete(uuid) {
-        setLoading(true);
         try {
-            const response = await fetch("/api/words", {
-                method: "DELETE",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ uuid }),
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                if (data.success) {
-                    updateData(data.data);
-                    toast.success("Deleted Successfully!");
-                } else {
-                    toast.error("Failed to delete word");
-                }
-            } else {
-                toast.error("Server error");
-            }
+            await deleteWord(uuid).unwrap();
+            toast.success("Deleted Successfully!");
+            if (updateData) updateData();
         } catch (error) {
-            toast.error("Request failed");
-        } finally {
-            setLoading(false);
-            handleCloseModal(uuid);
+            console.error('Delete error:', error);
+            toast.error(error?.data?.message || "Failed to delete word");
         }
     }
 
-    const handleOpenModal = (uuid) => {
-        modalRefs.current[uuid]?.classList.remove("hidden");
-    };
-
-    const handleCloseModal = (uuid) => {
-        modalRefs.current[uuid]?.classList.add("hidden");
-    };
-
-    const handleSearchChange = (value) => {
-        setSearchTerm(value);
-        onSearch(value);
-    };
+    const handleSearchChange = useCallback((value) => {
+        setSearchInput(value);
+    }, []);
 
     const handleFilterChange = (value) => {
-        setFilterType(value);
         onFilterChange(value);
     };
 
-    const clearSearch = () => {
-        setSearchTerm("");
+    const clearSearch = useCallback(() => {
+        setSearchInput("");
         onSearch("");
-    };
+    }, [onSearch]);
 
     const toggleSelectMode = () => {
-        setIsSelectMode(!isSelectMode);
-        setSelectedWords(new Set());
+        dispatch(setSelectMode(!isSelectMode));
+        if (isSelectMode) {
+            dispatch(clearSelectedWords());
+        }
     };
 
     const toggleSelectWord = (uuid) => {
-        const newSelected = new Set(selectedWords);
-        if (newSelected.has(uuid)) {
-            newSelected.delete(uuid);
-        } else {
-            newSelected.add(uuid);
-        }
-        setSelectedWords(newSelected);
+        dispatch(toggleSelectedWord(uuid));
     };
 
     const selectAllVisible = () => {
-        const allVisible = new Set(records.map(word => word.uuid));
-        setSelectedWords(allVisible);
+        const allVisible = records.map(word => word.uuid);
+        dispatch(setSelectedWords(allVisible));
     };
 
     const deselectAll = () => {
-        setSelectedWords(new Set());
+        dispatch(clearSelectedWords());
     };
 
     const bulkDelete = async () => {
         if (selectedWords.size === 0) return;
         
-        setLoading(true);
         try {
-            const promises = Array.from(selectedWords).map(uuid => 
-                fetch("/api/words", {
-                    method: "DELETE",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ uuid }),
-                })
-            );
-            
-            await Promise.all(promises);
-            
-            // Refresh data after bulk delete
-            updateData();
+            const uuids = Array.from(selectedWords);
+            await deleteWords(uuids).unwrap();
             toast.success(`Deleted ${selectedWords.size} words successfully!`);
-            setSelectedWords(new Set());
-            setIsSelectMode(false);
+            dispatch(clearSelectedWords());
+            dispatch(setSelectMode(false));
+            if (updateData) updateData();
         } catch (error) {
+            console.error('Bulk delete error:', error);
             toast.error("Failed to delete words");
-        } finally {
-            setLoading(false);
         }
     };
 
     const exportToCSV = async () => {
         try {
-            // Fetch all data for export (without pagination)
             const response = await fetch('/api/words?limit=1000000');
             const result = await response.json();
             const allData = result.success ? result.data : data;
@@ -181,7 +196,6 @@ export default function Component({
 
     const exportToJSON = async () => {
         try {
-            // Fetch all data for export (without pagination)
             const response = await fetch('/api/words?limit=1000000');
             const result = await response.json();
             const allData = result.success ? result.data : data;
@@ -216,11 +230,11 @@ export default function Component({
     };
 
     const openFlashcard = (word) => {
-        setFlashcardWord(word);
+        dispatch(openModal({ modalType: 'flashcard', data: { word } }));
     };
 
     const openPronunciationTrainer = (word) => {
-        setPronunciationWord(word);
+        dispatch(openModal({ modalType: 'pronunciation', data: { word } }));
     };
 
     const openStoryGenerator = () => {
@@ -228,18 +242,33 @@ export default function Component({
             toast.error("Please select some words first!");
             return;
         }
-        setStoryGeneratorOpen(true);
+        dispatch(openModal({ modalType: 'storyGenerator' }));
     };
 
     const getSelectedWordsArray = () => {
-        return records.filter(word => selectedWords.has(word.uuid));
+        return records.filter(word => selectedWords.includes(word.uuid));
     };
 
-    useEffect(() => {
-        setSearchTerm(filters?.search || '');
-        setFilterType(filters?.type || 'All');
-    }, [filters]);
+    const handleShowGermanToggle = () => {
+        if (showGerman && !showEnglish) {
+            toast.error("At least one column must be visible");
+            return;
+        }
+        dispatch(setShowGerman(!showGerman));
+    };
 
+    const handleShowEnglishToggle = () => {
+        if (showEnglish && !showGerman) {
+            toast.error("At least one column must be visible");
+            return;
+        }
+        dispatch(setShowEnglish(!showEnglish));
+    };
+
+    const handleShowAll = () => {
+        dispatch(setShowGerman(true));
+        dispatch(setShowEnglish(true));
+    };
 
     return (
         <motion.div
@@ -283,20 +312,29 @@ export default function Component({
                                         type="search"
                                         id="searchWord"
                                         name="searchWord"
-                                        value={searchTerm}
-                                        className="mt-1 block px-3 py-3 w-full text-primary bg-gray-100 border border-gray-300 rounded-md shadow-sm focus:bg-secondary-100 pr-8 min-h-[44px] text-sm sm:text-base"
+                                        value={searchInput}
+                                        className={`mt-1 block px-3 py-3 w-full text-primary bg-gray-100 border border-gray-300 rounded-md shadow-sm focus:bg-secondary-100 min-h-[44px] text-sm sm:text-base transition-colors ${
+                                            searchInput ? 'pr-16' : 'pr-3'
+                                        } ${isSearching ? 'border-blue-400 bg-blue-50' : ''}`}
                                         placeholder="Search words..."
                                         onChange={(e) => handleSearchChange(e.target.value)}
                                     />
-                                    {searchTerm && (
-                                        <button
-                                            type="button"
-                                            onClick={clearSearch}
-                                            className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                                            title="Clear search"
-                                        >
-                                            ✕
-                                        </button>
+                                    {searchInput && (
+                                        <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-1">
+                                            {isSearching && (
+                                                <div className="text-blue-500 text-xs font-medium animate-pulse">
+                                                    🔍
+                                                </div>
+                                            )}
+                                            <button
+                                                type="button"
+                                                onClick={clearSearch}
+                                                className="text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded-full p-1 transition-colors"
+                                                title="Clear search"
+                                            >
+                                                ✕
+                                            </button>
+                                        </div>
                                     )}
                                 </div>
                             </div>
@@ -327,24 +365,24 @@ export default function Component({
                             </div>
                         </div>
                         
-                        {(searchTerm || filterType !== "All") && (
+                        {(searchInput || filterType !== "All") && (
                             <div className="flex justify-center items-center sm:basis-1/3">
                                 <div className="text-sm">
-                                    <span className="font-medium">{pagination.total}</span> 
+                                    <span className="font-medium">{pagination.total}</span>
                                     <span className="ml-1">
-                                        {pagination.total === 1 ? 'word' : 'words'} 
-                                        {searchTerm && ` matching "${searchTerm}"`}
+                                        {pagination.total === 1 ? 'word' : 'words'}
+                                        {searchInput && ` matching "${searchInput}"`}
                                         {filterType !== "All" && ` (${filterType})`}
                                     </span>
                                     <button
                                         onClick={() => {
                                             clearSearch();
-                                            setFilterType("All");
-                                            onFilterChange("All");
+                                            handleFilterChange("All");
                                         }}
-                                        className="ml-2 text-xs underline hover:text-gray-100"
+                                        className="ml-2 text-xs underline hover:text-gray-100 bg-gray-600 text-white px-2 py-1 rounded no-underline hover:bg-gray-700 transition-colors"
+                                        title="Clear search and filter"
                                     >
-                                        Clear all
+                                        Reset filters
                                     </button>
                                 </div>
                             </div>
@@ -400,13 +438,7 @@ export default function Component({
                             <div className="flex items-center gap-2 ml-0 sm:ml-4">
                                 <span className="text-xs sm:text-sm text-gray-600">Show:</span>
                                 <button
-                                    onClick={() => {
-                                        if (showGerman && !showEnglish) {
-                                            toast.error("At least one column must be visible");
-                                            return;
-                                        }
-                                        setShowGerman(!showGerman);
-                                    }}
+                                    onClick={handleShowGermanToggle}
                                     className={`px-2 py-2 rounded text-xs font-medium transition-colors min-h-[36px] ${
                                         showGerman 
                                             ? 'bg-green-600 text-white' 
@@ -416,13 +448,7 @@ export default function Component({
                                     🇩🇪 <span className="hidden sm:inline">German</span>
                                 </button>
                                 <button
-                                    onClick={() => {
-                                        if (showEnglish && !showGerman) {
-                                            toast.error("At least one column must be visible");
-                                            return;
-                                        }
-                                        setShowEnglish(!showEnglish);
-                                    }}
+                                    onClick={handleShowEnglishToggle}
                                     className={`px-2 py-2 rounded text-xs font-medium transition-colors min-h-[36px] ${
                                         showEnglish 
                                             ? 'bg-green-600 text-white' 
@@ -433,10 +459,7 @@ export default function Component({
                                 </button>
                                 {(!showGerman || !showEnglish) && (
                                     <button
-                                        onClick={() => {
-                                            setShowGerman(true);
-                                            setShowEnglish(true);
-                                        }}
+                                        onClick={handleShowAll}
                                         className="px-2 py-2 rounded text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors min-h-[36px]"
                                     >
                                         Show All
@@ -495,23 +518,24 @@ export default function Component({
                                     </button>
                                     <button
                                         onClick={bulkDelete}
-                                        disabled={loading}
+                                        disabled={isBulkDeleting}
                                         className="px-3 py-2 bg-red-600 text-white rounded text-xs font-medium hover:bg-red-700 disabled:opacity-50 min-h-[36px] whitespace-nowrap"
                                     >
-                                        {loading ? 'Deleting...' : `🗑️ Delete ${selectedWords.size}`}
+                                        {isBulkDeleting ? 'Deleting...' : `🗑️ Delete ${selectedWords.size}`}
                                     </button>
                                 </>
                             )}
                         </div>
                     </div>
                 </div>
+                
                 {/* Mobile Card Layout */}
                 <div className="sm:hidden space-y-4 p-4">
                     {isSelectMode && (
                         <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg mb-4">
                             <input
                                 type="checkbox"
-                                checked={records.length > 0 && records.every(word => selectedWords.has(word.uuid))}
+                                checked={records.length > 0 && records.every(word => selectedWords.includes(word.uuid))}
                                 onChange={(e) => e.target.checked ? selectAllVisible() : deselectAll()}
                                 className="w-5 h-5"
                             />
@@ -526,7 +550,7 @@ export default function Component({
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.3, delay: i * 0.05 }}
                             className={`p-4 rounded-xl border-2 transition-all duration-200 ${
-                                isSelectMode && selectedWords.has(d.uuid)
+                                isSelectMode && selectedWords.includes(d.uuid)
                                     ? 'border-blue-300 bg-blue-50'
                                     : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-md'
                             }`}
@@ -553,7 +577,7 @@ export default function Component({
                                 {isSelectMode && (
                                     <input
                                         type="checkbox"
-                                        checked={selectedWords.has(d.uuid)}
+                                        checked={selectedWords.includes(d.uuid)}
                                         onChange={() => toggleSelectWord(d.uuid)}
                                         className="w-5 h-5 mt-1"
                                     />
@@ -597,16 +621,14 @@ export default function Component({
                                     <th className="w-12 py-3 px-4">
                                         <input
                                             type="checkbox"
-                                            checked={records.length > 0 && records.every(word => selectedWords.has(word.uuid))}
+                                            checked={records.length > 0 && records.every(word => selectedWords.includes(word.uuid))}
                                             onChange={(e) => e.target.checked ? selectAllVisible() : deselectAll()}
                                             className="w-4 h-4"
                                         />
                                     </th>
                                 )}
                                 {HEADERS.map((header, index) => {
-                                    // Skip German word column if hidden
                                     if (index === 0 && !showGerman) return null;
-                                    // Skip English word column if hidden  
                                     if (index === 1 && !showEnglish) return null;
                                     
                                     return (
@@ -639,7 +661,7 @@ export default function Component({
                                         delay: i * 0.05,
                                     }}
                                     className={`text-center transition-colors duration-200 ${
-                                        isSelectMode && selectedWords.has(d.uuid)
+                                        isSelectMode && selectedWords.includes(d.uuid)
                                             ? 'bg-blue-100 hover:bg-blue-200'
                                             : 'bg-gray-100 hover:bg-teriary-100'
                                     }`}
@@ -648,7 +670,7 @@ export default function Component({
                                         <td className="py-3 px-2 sm:px-4">
                                             <input
                                                 type="checkbox"
-                                                checked={selectedWords.has(d.uuid)}
+                                                checked={selectedWords.includes(d.uuid)}
                                                 onChange={() => toggleSelectWord(d.uuid)}
                                                 className="w-4 h-4"
                                             />
@@ -740,19 +762,19 @@ export default function Component({
             
             {/* Modals */}
             <FlashcardModal
-                word={flashcardWord}
-                isOpen={!!flashcardWord}
-                onClose={() => setFlashcardWord(null)}
+                word={flashcardModal.word}
+                isOpen={flashcardModal.isOpen}
+                onClose={() => dispatch(closeModal('flashcard'))}
                 onSpeak={handleSpeak}
             />
             <PronunciationTrainerModal
-                word={pronunciationWord}
-                isOpen={!!pronunciationWord}
-                onClose={() => setPronunciationWord(null)}
+                word={pronunciationModal.word}
+                isOpen={pronunciationModal.isOpen}
+                onClose={() => dispatch(closeModal('pronunciation'))}
             />
             <StoryGeneratorModal
-                isOpen={storyGeneratorOpen}
-                onClose={() => setStoryGeneratorOpen(false)}
+                isOpen={storyGeneratorModal.isOpen}
+                onClose={() => dispatch(closeModal('storyGenerator'))}
                 selectedWords={getSelectedWordsArray()}
                 onSpeak={handleSpeak}
             />
@@ -777,3 +799,5 @@ function PageButton({ children, onClick, disabled, className = "" }) {
         </motion.button>
     );
 }
+
+export default React.memo(Component);

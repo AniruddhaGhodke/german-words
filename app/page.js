@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 
 import React from "react";
 import { authOptions } from "./api/auth/[...nextauth]/route";
-import Accordion from "@/components/WordForm";
+import WordsPageLayout from "@/components/features/words-table";
 import Welcome from "@/components/Welcome";
 
 const Home = async () => {
@@ -20,8 +20,7 @@ const Home = async () => {
                 id="content"
             >
                 {session ? (
-                    <Accordion
-                        session={isLoggedIn}
+                    <WordsPageLayout
                         rate={process.env.SPEAK_RATE}
                     />
                 ) : null}

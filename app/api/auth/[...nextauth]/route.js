@@ -71,8 +71,6 @@ const authOptions = {
             return session;
         },
         async signIn({ profile, account, user }) {
-            console.log("SignIn callback - Provider:", account?.provider);
-            
             if (account?.provider == "credentials") {
                 console.log("Credentials sign-in successful for user:", user?.email);
                 return true;

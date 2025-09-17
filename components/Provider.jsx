@@ -1,12 +1,15 @@
 'use client'
 
 import { SessionProvider } from "next-auth/react"
+import ReduxProvider from "./ReduxProvider"
 
 const Provider = ({children, session}) => {
     return (
-        <SessionProvider session={session}>
-            {children}
-        </SessionProvider>
+        <ReduxProvider>
+            <SessionProvider session={session}>
+                {children}
+            </SessionProvider>
+        </ReduxProvider>
     )
 }
 

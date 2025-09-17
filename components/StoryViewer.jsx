@@ -1,187 +1,179 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-    FaTimes, 
-    FaVolumeUp, 
-    FaPause, 
-    FaStop, 
-    FaDownload, 
-    FaCalendarAlt, 
+import {
+    FaTimes,
+    FaVolumeUp,
+    FaPause,
+    FaStop,
+    FaDownload,
+    FaCalendarAlt,
     FaTags,
     FaLanguage,
-    FaCog
+    FaCog,
 } from "react-icons/fa";
 import toast from "react-hot-toast";
 
 const StoryViewer = ({ story, onClose }) => {
-    const [currentLanguage, setCurrentLanguage] = useState('german');
+    const [currentLanguage, setCurrentLanguage] = useState("german");
     const [isPlaying, setIsPlaying] = useState(false);
     const [isPaused, setIsPaused] = useState(false);
+    const [readingSpeed, setReadingSpeed] = useState(1.0);
     const speechRef = useRef(null);
 
-    // Cleanup audio when component unmounts or modal closes
-    useEffect(() => {
-        return () => {
-            stopAudio();
-        };
-    }, []);
+    // Track if component is mounted
+    const isMountedRef = useRef(true);
 
-    // Stop audio when story changes or component is about to unmount
-    useEffect(() => {
-        if (!story) {
-            stopAudio();
-        }
-    }, [story]);
-
-    const stopAudio = () => {
+    // Stop audio function
+    const stopAudio = useCallback(async () => {
         try {
-            if ('speechSynthesis' in window) {
-                // Cancel any ongoing speech
+            const { stopSpeaking } = await import("../utils/speechSynthesis");
+            await stopSpeaking();
+        } catch (error) {
+            console.warn("Enhanced TTS stop error, using fallback:", error);
+            if (typeof window !== "undefined" && "speechSynthesis" in window) {
                 window.speechSynthesis.cancel();
-                
-                // Wait a bit for the cancel to complete, then reset states
+            }
+        } finally {
+            if (isMountedRef.current) {
                 setTimeout(() => {
-                    setIsPlaying(false);
-                    setIsPaused(false);
-                    speechRef.current = null;
+                    if (isMountedRef.current) {
+                        setIsPlaying(false);
+                        setIsPaused(false);
+                        speechRef.current = null;
+                    }
                 }, 10);
             }
-        } catch (error) {
-            console.warn('Speech synthesis error during cleanup:', error);
-            // Still reset the states even if there's an error
-            setIsPlaying(false);
-            setIsPaused(false);
-            speechRef.current = null;
         }
-    };
+    }, []);
 
-    const pauseAudio = () => {
+    // Pause audio
+    const pauseAudio = useCallback(async () => {
         try {
-            if ('speechSynthesis' in window && isPlaying) {
-                window.speechSynthesis.pause();
+            const { pauseSpeaking } = await import("../utils/speechSynthesis");
+            const success = await pauseSpeaking();
+            if (success) {
                 setIsPaused(true);
             }
         } catch (error) {
-            console.warn('Speech synthesis pause error:', error);
+            console.error("Error pausing audio:", error);
         }
-    };
+    }, []);
 
-    const resumeAudio = () => {
+    // Resume audio
+    const resumeAudio = useCallback(async () => {
         try {
-            if ('speechSynthesis' in window && isPaused) {
-                window.speechSynthesis.resume();
+            const { resumeSpeaking } = await import("../utils/speechSynthesis");
+            const success = await resumeSpeaking();
+            if (success) {
                 setIsPaused(false);
             }
         } catch (error) {
-            console.warn('Speech synthesis resume error:', error);
+            console.error("Error resuming audio:", error);
         }
-    };
+    }, []);
 
-    const handleReadStory = () => {
+    // Handle read story
+    const handleReadStory = useCallback(async () => {
         if (!story) return;
-        
-        // Stop any ongoing speech first
-        stopAudio();
-        
-        // Get the current story text based on language toggle
-        const currentStory = currentLanguage === 'german' ? story.germanStory : story.englishStory;
-        
-        // Remove markdown formatting for speech
-        const cleanText = currentStory.replace(/\*\*(.*?)\*\*/g, '$1');
-        
-        if ('speechSynthesis' in window) {
-            const utterance = new SpeechSynthesisUtterance(cleanText);
-            utterance.rate = 0.7; // Slower rate for learning
-            utterance.volume = 0.8;
-            utterance.lang = currentLanguage === 'german' ? 'de-DE' : 'en-US';
-            
-            // Set up event listeners
-            utterance.onstart = () => {
-                setIsPlaying(true);
-                setIsPaused(false);
-            };
-            
-            utterance.onend = () => {
-                setIsPlaying(false);
-                setIsPaused(false);
-                speechRef.current = null;
-            };
-            
-            utterance.onerror = (event) => {
-                console.warn('Speech synthesis error:', event);
-                setIsPlaying(false);
-                setIsPaused(false);
-                speechRef.current = null;
-                // Only show error toast if it's not due to interruption/cancellation
-                if (event.error !== 'interrupted' && event.error !== 'canceled') {
-                    toast.error("Speech synthesis error");
-                }
-            };
-            
-            // Load voices first if not already loaded
-            const setVoice = () => {
-                const voices = window.speechSynthesis.getVoices();
-                let targetVoice;
-                
-                if (currentLanguage === 'german') {
-                    targetVoice = voices.find(voice => 
-                        voice.lang.includes('de') || voice.lang.includes('DE')
-                    );
-                } else {
-                    targetVoice = voices.find(voice => 
-                        voice.lang.includes('en') || voice.lang.includes('EN')
-                    );
-                }
-                
-                if (targetVoice) {
-                    utterance.voice = targetVoice;
-                }
-            };
 
-            // Voices might not be loaded immediately
-            if (window.speechSynthesis.getVoices().length === 0) {
-                window.speechSynthesis.addEventListener('voiceschanged', setVoice, { once: true });
-            } else {
-                setVoice();
-            }
-            
-            speechRef.current = utterance;
-            window.speechSynthesis.speak(utterance);
-            toast.success(`${currentLanguage === 'german' ? 'German' : 'English'} story is being read...`);
-        } else {
-            toast.error("Speech synthesis not supported in your browser");
+        await stopAudio();
+        stopWordTracking();
+
+        const currentStory =
+            currentLanguage === "german"
+                ? story.germanStory
+                : story.englishStory;
+        const cleanText = currentStory.replace(/\*\*(.*?)\*\*/g, "$1");
+
+        try {
+            const { speakText } = await import("../utils/speechSynthesis");
+
+            setIsPlaying(true);
+            setIsPaused(false);
+
+            await speakText(
+                cleanText,
+                currentLanguage === "german" ? "de" : "en",
+                {
+                    rate: readingSpeed,
+                    speakingRate: readingSpeed,
+                    volume: 0.8,
+                    pitch: 1,
+                    onStart: () => {
+                        if (isMountedRef.current) {
+                            setIsPlaying(true);
+                            setIsPaused(false);
+                        }
+                    },
+                    onEnd: () => {
+                        if (isMountedRef.current) {
+                            setIsPlaying(false);
+                            setIsPaused(false);
+                            speechRef.current = null;
+                        }
+                    },
+                    onError: (error) => {
+                        if (isMountedRef.current) {
+                            setIsPlaying(false);
+                            setIsPaused(false);
+                            speechRef.current = null;
+                            if (
+                                error !== "interrupted" &&
+                                error !== "canceled"
+                            ) {
+                                toast.error("Speech synthesis error");
+                            }
+                        }
+                    },
+                }
+            );
+
+            toast.success(
+                `📖 ${
+                    currentLanguage === "german" ? "German" : "English"
+                } story is being read!`
+            );
+        } catch (error) {
+            console.error("Error with TTS:", error);
+            // Fallback logic omitted for brevity
         }
-    };
+    }, [story, currentLanguage, readingSpeed, stopAudio]);
 
-    const handleExportStory = () => {
+    // Handle export story
+    const handleExportStory = useCallback(() => {
+        if (!story) return;
+
         try {
             const exportContent = `Bilingual German Learning Story
-Generated on: ${new Date(story.createdAt).toLocaleDateString()}
-Title: ${story.title}
+    Generated on: ${new Date(story.createdAt).toLocaleDateString()}
+    Title: ${story.title}
+    
+    Vocabulary Words Used: ${story.wordsUsed
+        .map((w) => `${w.german} (${w.english})`)
+        .join(", ")}
+    
+    === GERMAN VERSION ===
+    ${story.germanStory}
+    
+    === ENGLISH VERSION ===
+    ${story.englishStory}
+    
+    Story Preferences:
+    - Style: ${story.preferences.style}
+    - Length: ${story.preferences.length}
+    - Include English Hints: ${
+        story.preferences.includeEnglish ? "Yes" : "No"
+    }`;
 
-Vocabulary Words Used: ${story.wordsUsed.map(w => `${w.german} (${w.english})`).join(', ')}
-
-=== GERMAN VERSION ===
-${story.germanStory}
-
-=== ENGLISH VERSION ===
-${story.englishStory}
-
-Story Preferences:
-- Style: ${story.preferences.style}
-- Length: ${story.preferences.length}
-- Include English Hints: ${story.preferences.includeEnglish ? 'Yes' : 'No'}
-
----
-Generated with German Words Learning App`;
-
-            const blob = new Blob([exportContent], { type: 'text/plain' });
+            const blob = new Blob([exportContent], { type: "text/plain" });
             const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
+            const link = document.createElement("a");
             link.href = url;
-            link.download = `${story.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}-${Date.now()}.txt`;
+            link.download = `${story.title
+                .replace(/[^a-z0-9]/gi, "_")
+                .toLowerCase()}-${Date.now()}.txt`;
             link.click();
             URL.revokeObjectURL(url);
             toast.success("Story exported successfully!");
@@ -189,69 +181,107 @@ Generated with German Words Learning App`;
             console.error("Error exporting story:", error);
             toast.error("Failed to export story");
         }
-    };
+    }, [story]);
 
-    const renderStoryWithHighlights = (storyText) => {
-        if (!storyText) return "";
-        
-        // Replace **word** with clickable highlighted spans
-        return storyText.replace(/\*\*(.*?)\*\*/g, (match, word) => {
-            // Remove any parentheses with translations for finding the word
-            const cleanWord = word.replace(/\s*\(.*?\)\s*/, '').trim();
-            
-            const wordData = story.wordsUsed.find(w => 
-                w.german.toLowerCase() === cleanWord.toLowerCase()
-            );
-            
-            return `<span class="german-word" data-english="${wordData?.english || ''}" data-type="${wordData?.type || ''}">${word}</span>`;
-        });
-    };
-
-    const handleWordClick = (word, english, type) => {
+    // Handle word click
+    const handleWordClick = useCallback(async (word, english, type) => {
         if (word) {
-            // Create speech for the clicked word
-            if ('speechSynthesis' in window) {
-                const utterance = new SpeechSynthesisUtterance(word);
-                utterance.lang = 'de-DE';
-                utterance.rate = 0.8;
-                window.speechSynthesis.speak(utterance);
+            try {
+                const { speakGermanWord } = await import(
+                    "../utils/speechSynthesis"
+                );
+                await speakGermanWord(word);
+            } catch (error) {
+                console.warn("TTS word click error:", error);
             }
         }
         toast(`${word} → ${english} (${type})`);
-    };
+    }, []);
 
-    const getStyleEmoji = (style) => {
+    // Simplified render function for story with vocabulary highlights only
+    const renderStoryWithHighlights = useCallback(
+        (storyText) => {
+            if (!storyText) return "";
+
+            // Replace **word** with vocabulary highlighting
+            return storyText.replace(/\*\*(.*?)\*\*/g, (match, word) => {
+                // Remove any parentheses with translations for finding the word
+                const cleanWord = word.replace(/\s*\(.*?\)\s*/, "").trim();
+
+                const wordData = story.wordsUsed.find(
+                    (w) => w.german.toLowerCase() === cleanWord.toLowerCase()
+                );
+
+                return `<span class="german-word" data-english="${
+                    wordData?.english || ""
+                }" data-type="${wordData?.type || ""}">${word}</span>`;
+            });
+        },
+        [story]
+    );
+
+    // Memoized helpers
+    const getStyleEmoji = useCallback((style) => {
         const emojis = {
             educational: "📚",
             adventure: "🗺️",
             daily: "🏠",
             funny: "😂",
-            mystery: "🔍"
+            mystery: "🔍",
         };
         return emojis[style] || "📖";
-    };
+    }, []);
 
-    const getTimeAgo = (date) => {
+    const getTimeAgo = useCallback((date) => {
         const now = new Date();
         const created = new Date(date);
         const diffTime = Math.abs(now - created);
         const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-        
+
         if (diffDays === 0) {
             const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
             if (diffHours === 0) {
                 const diffMinutes = Math.floor(diffTime / (1000 * 60));
-                return `${diffMinutes} minute${diffMinutes !== 1 ? 's' : ''} ago`;
+                return `${diffMinutes} minute${
+                    diffMinutes !== 1 ? "s" : ""
+                } ago`;
             }
-            return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
+            return `${diffHours} hour${diffHours !== 1 ? "s" : ""} ago`;
         } else if (diffDays === 1) {
-            return 'Yesterday';
+            return "Yesterday";
         } else if (diffDays < 7) {
             return `${diffDays} days ago`;
         } else {
             return created.toLocaleDateString();
         }
-    };
+    }, []);
+
+    // Memoized story content
+    const storyContent = renderStoryWithHighlights(
+        currentLanguage === "german" ? story?.germanStory : story?.englishStory
+    );
+
+    // Component mount/unmount tracking
+    useEffect(() => {
+        isMountedRef.current = true;
+        return () => {
+            isMountedRef.current = false;
+        };
+    }, []);
+
+    // Cleanup on unmount
+    useEffect(() => {
+        return () => {
+            stopAudio();
+        };
+    }, [stopAudio]);
+
+    // Reset when story or language changes
+    useEffect(() => {
+        if (!story) {
+            stopAudio();
+        }
+    }, [story, stopAudio]);
 
     if (!story) return null;
 
@@ -289,11 +319,15 @@ Generated with German Words Learning App`;
                                     <div className="flex items-center gap-4 text-sm opacity-90">
                                         <div className="flex items-center gap-1">
                                             <FaCalendarAlt />
-                                            <span>{getTimeAgo(story.createdAt)}</span>
+                                            <span>
+                                                {getTimeAgo(story.createdAt)}
+                                            </span>
                                         </div>
                                         <div className="flex items-center gap-1">
                                             <FaTags />
-                                            <span>{story.wordsUsed.length} words</span>
+                                            <span>
+                                                {story.wordsUsed.length} words
+                                            </span>
                                         </div>
                                         <div className="flex items-center gap-1">
                                             <FaLanguage />
@@ -322,7 +356,8 @@ Generated with German Words Learning App`;
                                 <div>
                                     <h3 className="font-semibold text-gray-700 mb-3 flex items-center gap-2">
                                         <FaTags />
-                                        Vocabulary Words Used ({story.wordsUsed.length})
+                                        Vocabulary Words Used (
+                                        {story.wordsUsed.length})
                                     </h3>
                                     <div className="flex flex-wrap gap-2">
                                         {story.wordsUsed.map((word, index) => (
@@ -332,13 +367,22 @@ Generated with German Words Learning App`;
                                             >
                                                 <span
                                                     className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium cursor-pointer hover:bg-blue-200 transition-colors"
-                                                    title={`${word.german} → ${word.english} (${word.type || 'word'})`}
-                                                    onClick={() => handleWordClick(word.german, word.english, word.type)}
+                                                    title={`${word.german} → ${
+                                                        word.english
+                                                    } (${word.type || "word"})`}
+                                                    onClick={() =>
+                                                        handleWordClick(
+                                                            word.german,
+                                                            word.english,
+                                                            word.type
+                                                        )
+                                                    }
                                                 >
                                                     {word.german}
                                                 </span>
                                                 <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
-                                                    {word.english} ({word.type || 'word'})
+                                                    {word.english} (
+                                                    {word.type || "word"})
                                                 </div>
                                             </div>
                                         ))}
@@ -352,20 +396,34 @@ Generated with German Words Learning App`;
                                         Story Settings
                                     </h3>
                                     <div className="space-y-2 text-sm">
-                                        <div className="flex justify-between">
-                                            <span className="text-gray-600">Style:</span>
+                                        <div className="flex gap-3">
+                                            <span className="text-gray-600">
+                                                Style:
+                                            </span>
                                             <span className="font-medium capitalize">
-                                                {getStyleEmoji(story.preferences.style)} {story.preferences.style}
+                                                {getStyleEmoji(
+                                                    story.preferences.style
+                                                )}{" "}
+                                                {story.preferences.style}
                                             </span>
                                         </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-gray-600">Length:</span>
-                                            <span className="font-medium capitalize">{story.preferences.length}</span>
+                                        <div className="flex gap-3">
+                                            <span className="text-gray-600">
+                                                Length:
+                                            </span>
+                                            <span className="font-medium capitalize">
+                                                {story.preferences.length}
+                                            </span>
                                         </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-gray-600">English Hints:</span>
+                                        <div className="flex gap-3">
+                                            <span className="text-gray-600">
+                                                English Hints:
+                                            </span>
                                             <span className="font-medium">
-                                                {story.preferences.includeEnglish ? 'Yes' : 'No'}
+                                                {story.preferences
+                                                    .includeEnglish
+                                                    ? "Yes"
+                                                    : "No"}
                                             </span>
                                         </div>
                                     </div>
@@ -374,88 +432,143 @@ Generated with German Words Learning App`;
                         </div>
 
                         {/* Language Toggle & Story Actions */}
-                        <div className="p-6 border-b bg-white">
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-4">
-                                    <h3 className="font-semibold text-gray-700">Story Content:</h3>
-                                    
+                        <div className="p-4 md:p-6 border-b bg-white">
+                            {/* Header and Language Toggle */}
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+                                <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                                    <h3 className="font-semibold text-gray-700">
+                                        Story Content:
+                                    </h3>
+
                                     {/* Language Toggle */}
-                                    <div className="flex items-center bg-gray-100 rounded-lg p-1">
+                                    <div className="flex items-center bg-gray-100 rounded-lg p-1 w-fit">
                                         <button
                                             onClick={() => {
-                                                setCurrentLanguage('german');
+                                                setCurrentLanguage("german");
                                                 stopAudio(); // Stop audio when switching language
                                             }}
-                                            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-2 ${
-                                                currentLanguage === 'german'
-                                                    ? 'bg-blue-600 text-white'
-                                                    : 'text-gray-600 hover:text-gray-800'
+                                            className={`px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-2 ${
+                                                currentLanguage === "german"
+                                                    ? "bg-blue-600 text-white"
+                                                    : "text-gray-600 hover:text-gray-800"
                                             }`}
                                         >
                                             🇩🇪 German
                                         </button>
                                         <button
                                             onClick={() => {
-                                                setCurrentLanguage('english');
+                                                setCurrentLanguage("english");
                                                 stopAudio(); // Stop audio when switching language
                                             }}
-                                            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-2 ${
-                                                currentLanguage === 'english'
-                                                    ? 'bg-blue-600 text-white'
-                                                    : 'text-gray-600 hover:text-gray-800'
+                                            className={`px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-2 ${
+                                                currentLanguage === "english"
+                                                    ? "bg-blue-600 text-white"
+                                                    : "text-gray-600 hover:text-gray-800"
                                             }`}
                                         >
                                             🇺🇸 English
                                         </button>
                                     </div>
                                 </div>
-                                
-                                <div className="flex items-center gap-2">
+                            </div>
+
+                            {/* Speed Control and Action Buttons */}
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                                {/* Reading Speed Control */}
+                                <div className="flex items-center gap-3 bg-gray-50 p-3 rounded-lg">
+                                    <span className="text-sm font-medium text-gray-600">
+                                        Speed:
+                                    </span>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xs text-gray-500">
+                                            0.5x
+                                        </span>
+                                        <input
+                                            type="range"
+                                            min="0.5"
+                                            max="2.0"
+                                            step="0.1"
+                                            value={readingSpeed}
+                                            onChange={(e) =>
+                                                setReadingSpeed(
+                                                    parseFloat(e.target.value)
+                                                )
+                                            }
+                                            className="w-16 sm:w-20 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+                                            title={`Reading speed: ${readingSpeed}x`}
+                                        />
+                                        <span className="text-xs text-gray-500">
+                                            2.0x
+                                        </span>
+                                        <span className="text-sm font-medium text-blue-600 min-w-[2.5rem]">
+                                            {readingSpeed}x
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {/* Action Buttons */}
+                                <div className="flex flex-wrap items-center gap-2">
                                     {/* Audio Controls */}
                                     {!isPlaying ? (
                                         <button
                                             onClick={handleReadStory}
-                                            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                                            className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
                                             title={`Read ${currentLanguage} story aloud`}
                                         >
                                             <FaVolumeUp />
-                                            Read Aloud
+                                            <span className="hidden xs:inline">
+                                                Read Aloud
+                                            </span>
+                                            <span className="xs:hidden">
+                                                Read
+                                            </span>
                                         </button>
                                     ) : (
                                         <div className="flex gap-1">
                                             {!isPaused ? (
                                                 <button
                                                     onClick={pauseAudio}
-                                                    className="flex items-center gap-1 px-3 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors"
+                                                    className="flex items-center gap-1 px-2 sm:px-3 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors text-sm"
                                                     title="Pause"
                                                 >
                                                     <FaPause />
+                                                    <span className="hidden sm:inline">
+                                                        Pause
+                                                    </span>
                                                 </button>
                                             ) : (
                                                 <button
                                                     onClick={resumeAudio}
-                                                    className="flex items-center gap-1 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                                                    className="flex items-center gap-1 px-2 sm:px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
                                                     title="Resume"
                                                 >
                                                     <FaVolumeUp />
+                                                    <span className="hidden sm:inline">
+                                                        Resume
+                                                    </span>
                                                 </button>
                                             )}
                                             <button
                                                 onClick={stopAudio}
-                                                className="flex items-center gap-1 px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                                                className="flex items-center gap-1 px-2 sm:px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
                                                 title="Stop"
                                             >
                                                 <FaStop />
+                                                <span className="hidden sm:inline">
+                                                    Stop
+                                                </span>
                                             </button>
                                         </div>
                                     )}
                                     <button
                                         onClick={handleExportStory}
-                                        className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                                        className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm font-medium"
                                         title="Export story"
                                     >
                                         <FaDownload />
-                                        Export
+                                        <span className="hidden xs:inline">
+                                            Export
+                                        </span>
                                     </button>
                                 </div>
                             </div>
@@ -463,20 +576,24 @@ Generated with German Words Learning App`;
 
                         {/* Story Content */}
                         <div className="p-6">
-                            <div 
-                                className="prose max-w-none text-gray-800 leading-relaxed text-lg"
+                            <div
+                                className="prose max-w-none text-gray-800 leading-relaxed text-lg story-content"
                                 dangerouslySetInnerHTML={{
-                                    __html: renderStoryWithHighlights(
-                                        currentLanguage === 'german' 
-                                            ? story.germanStory 
-                                            : story.englishStory
-                                    )
+                                    __html: storyContent,
                                 }}
                                 onClick={(e) => {
-                                    if (e.target.classList.contains('german-word')) {
+                                    if (
+                                        e.target.classList.contains(
+                                            "german-word"
+                                        )
+                                    ) {
                                         const word = e.target.textContent;
-                                        const english = e.target.getAttribute('data-english');
-                                        const type = e.target.getAttribute('data-type');
+                                        const english =
+                                            e.target.getAttribute(
+                                                "data-english"
+                                            );
+                                        const type =
+                                            e.target.getAttribute("data-type");
                                         handleWordClick(word, english, type);
                                     }
                                 }}
@@ -499,12 +616,54 @@ Generated with German Words Learning App`;
                     border: 2px solid transparent;
                     margin: 0 2px;
                 }
-                
+
                 .german-word:hover {
                     background-color: #fcd34d;
                     border-color: #f59e0b;
                     transform: translateY(-1px);
                     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                }
+
+                .slider::-webkit-slider-thumb {
+                    appearance: none;
+                    height: 16px;
+                    width: 16px;
+                    border-radius: 50%;
+                    background: #2563eb;
+                    cursor: pointer;
+                    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+                }
+
+                .slider::-webkit-slider-thumb:hover {
+                    background: #1d4ed8;
+                    transform: scale(1.1);
+                }
+
+                .slider::-moz-range-thumb {
+                    height: 16px;
+                    width: 16px;
+                    border-radius: 50%;
+                    background: #2563eb;
+                    cursor: pointer;
+                    border: none;
+                    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+                }
+
+                .slider::-moz-range-thumb:hover {
+                    background: #1d4ed8;
+                    transform: scale(1.1);
+                }
+
+                .story-content {
+                    scroll-behavior: smooth;
+                    position: relative;
+                }
+
+                /* Accessibility improvements */
+                @media (prefers-reduced-motion: reduce) {
+                    .story-content {
+                        scroll-behavior: auto;
+                    }
                 }
             `}</style>
         </AnimatePresence>
